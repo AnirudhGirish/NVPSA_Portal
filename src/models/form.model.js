@@ -14,7 +14,6 @@ const formSchema = new Schema({
     email:{
         type:String,
         unique:true,
-        required:[true,"Email is required"]
     },
     address:{
         type:String,
@@ -28,11 +27,9 @@ const formSchema = new Schema({
     pass:{
         type:String,
         enums:["SSLC","PUC","Degree","Others"],
-        required:[true,"Last passed level is required"]
     },
     year:{
         type:String,
-        required:[true,"Year of passing is required"]
     }
 },{timestamps:true});
 

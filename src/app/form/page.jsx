@@ -83,7 +83,7 @@ export default function FormPage() {
                 {errors.aadhar && <p className="text-red-500 text-sm">{errors.aadhar.message}</p>}
             </div>
             <div className="mb-4">
-                <label className="block text-lg font-medium text-gray-700">Education Level</label>
+                <label className="block text-lg font-medium text-gray-700">Last Attended Program At NV</label>
                 <select
                   className="w-full p-2 border rounded-lg mt-1 text-zinc-700"
                   {...register("pass")}
