@@ -13,7 +13,6 @@ const formSchema = new Schema({
     },
     email:{
         type:String,
-        unique:true,
     },
     address:{
         type:String,
@@ -21,7 +20,6 @@ const formSchema = new Schema({
     },
     aadhar:{
         type:String,
-        unique:true,
     },
     pass:{
         type:String,
