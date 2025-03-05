@@ -47,28 +47,29 @@ export default function FormPage() {
         {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="mb-4">
-                <label className="block text-lg font-medium text-gray-700">Name</label>
-                <input type="text" {...register("name")} className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
+                <label className="block text-lg font-medium text-gray-700">Name <span className='text-md text-red-600'>*</span></label>
+                <input type="text" {...register("name")} placeholder='Enter your full name' className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
                 {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
             </div>
             <div className="mb-4">
-                <label className="block text-lg font-medium text-gray-700">Address</label>
-                <input type="text" {...register("address")} className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
+                <label className="block text-lg font-medium text-gray-700">Address <span className='text-md text-red-600'>*</span></label>
+                <input type="text" {...register("address")} placeholder='Enter your residential address' className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
                 {errors.address && <p className="text-red-500 text-sm">{errors.address.message}</p>}
             </div>
             <div className="mb-4">
-                <label className="block text-lg font-medium text-gray-700">Phone Number</label>
+                <label className="block text-lg font-medium text-gray-700">Phone Number <span className='text-md text-red-600'>*</span></label>
                 <input
                   type="text"
                   {...register("number", { valueAsNumber: true })}
                   onInput={(e) => (e.target.value = e.target.value.replace(/\D/g, ""))}
+                  placeholder='Enter your contact number'
                   className="w-full p-2 border rounded-lg mt-1 text-zinc-700"
                 />
                 {errors.number && <p className="text-red-500 text-sm">{errors.number.message}</p>}
             </ div>
             <div className="mb-4">
                 <label className="block text-lg font-medium text-gray-700">Email</label>
-                <input type="email" {...register("email")} className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
+                <input type="email" {...register("email")} placeholder='Enter your email address' className="w-full p-2 border rounded-lg mt-1 text-zinc-700" />
                 {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
             </div>
             
@@ -76,8 +77,9 @@ export default function FormPage() {
                 <label className="block text-lg font-medium text-gray-700">Aadhar Number</label>
                 <input
                   type="text"
-                  {...register("aadhar", { valueAsNumber: true })}
+                  {...register("aadhar")}
                   onInput={(e) => (e.target.value = e.target.value.replace(/\D/g, ""))}
+                  placeholder='Enter your 12 digit Aadhar Number'
                   className="w-full p-2 border rounded-lg mt-1 text-zinc-700"
                 />
                 {errors.aadhar && <p className="text-red-500 text-sm">{errors.aadhar.message}</p>}

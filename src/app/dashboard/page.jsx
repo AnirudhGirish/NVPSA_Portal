@@ -12,23 +12,84 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const router = useRouter();
 
+  // useEffect(() => {
+  //   const token = Cookies.get('token');
+  //   console.log(token)
+  //   if (!token) {
+  //     router.push('/signin');
+  //     return;
+  //   }
+  //   setAuthenticated(true);
+  //   window.history.pushState(null, '', window.location.href);
+  //   window.addEventListener('popstate', function () {
+  //     router.push('/signin');
+  //   });
+
+  //   return () => {
+  //     window.removeEventListener('popstate', () => {});
+  //   };
+
+  //   const fetchData = async () => {
+  //       setLoading(true)
+  //     try {
+  //       const response = await fetch('/api/fetch');
+  //       if (!response.ok) throw new Error('Failed to fetch data');
+  //       const result = await response.json();
+  //       if (!Array.isArray(result.responses)) {
+  //           throw new Error("Invalid data format");
+  //       }
+  //       setData(result.responses);
+  //     } catch (error) {
+  //       setError(error.message);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchData();
+  // }, []);
+
   useEffect(() => {
     const token = Cookies.get('token');
-    console.log(token)
+    console.log(token);
+  
+    // If no token, redirect and prevent further execution
     if (!token) {
       router.push('/signin');
       return;
     }
+  
+    // Set authentication status
     setAuthenticated(true);
+  
+    // Prevent user from accessing the page after logout
+    window.history.pushState(null, '', window.location.href);
+    window.history.replaceState(null, '', window.location.href);
 
+    const handleBackButton = () => {
+      window.history.pushState(null, '', window.location.href);
+      router.replace('/signin');
+    };
+
+    window.addEventListener('popstate', handleBackButton);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [router]); // Dependency to avoid unnecessary re-renders
+  
+  // Fetch Data only when authenticated
+  useEffect(() => {
+    if (!authenticated) return; // Ensure data fetching happens only when authenticated
+  
     const fetchData = async () => {
-        setLoading(true)
+      setLoading(true);
       try {
         const response = await fetch('/api/fetch');
         if (!response.ok) throw new Error('Failed to fetch data');
         const result = await response.json();
         if (!Array.isArray(result.responses)) {
-            throw new Error("Invalid data format");
+          throw new Error('Invalid data format');
         }
         setData(result.responses);
       } catch (error) {
@@ -37,8 +98,10 @@ export default function AdminPage() {
         setLoading(false);
       }
     };
+  
     fetchData();
-  }, []);
+  }, [authenticated]); // Fetch only when authentication is set
+  
 
   const handleExport = async () => {
     try {
@@ -69,7 +132,9 @@ export default function AdminPage() {
             try {
               const response = await fetch('/api/sign-out', { method: 'GET' });
               if (response.ok) {
+                Cookies.remove('token');
                 window.location.href = '/';
+                window.history.replaceState(null, '', '/signin');
               } else {
                 alert("Logout failed");
               }

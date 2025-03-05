@@ -6,9 +6,7 @@ export async function POST(req){
 
     try {
         const {name, number, email, address, aadhar, pass, year} = await req.json();
-        const dataExists = await Form.findOne({
-            $or:[{number},{aadhar}]
-        });
+        const dataExists = await Form.findOne({number});
         if(dataExists){
             return Response.json({success:false, message:"User exists with these credentials"},{status:400});
         }

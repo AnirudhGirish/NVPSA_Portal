@@ -20,9 +20,8 @@ const formSchema = new Schema({
         required:[true,"Address is required"]
     },
     aadhar:{
-        type:Number,
+        type:String,
         unique:true,
-        required:[true,"Aadhar is required"]
     },
     pass:{
         type:String,
