@@ -76,5 +76,6 @@ export default function AdminSignin() {
         </form>
       </div>
     </div>
+    
   );
 }

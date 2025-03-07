@@ -5,14 +5,16 @@ import Link from 'next/link';
 
 export default function HomePage() {
   const [profileUrl, setProfileUrl] = useState('');
+  const [memberUrl, setMemberUrl] = useState('');
 
   useEffect(() => {
     setProfileUrl(`${window.location.protocol}//${window.location.host}/form`);
+    setMemberUrl(`${window.location.protocol}//${window.location.host}/membership`)
   }, []);
 
   const copyToClipboard = () => {
     if (!profileUrl) {
-      alert("Profile URL is not available yet!");
+      alert(" URL is not available yet!");
       return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -21,6 +23,20 @@ export default function HomePage() {
         .catch(() => fallbackCopyText(profileUrl));
     } else {
       fallbackCopyText(profileUrl);
+    }
+  };
+
+  const copyToClipboard2 = () => {
+    if (!memberUrl) {
+      alert(" URL is not available yet!");
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(memberUrl)
+        .then(() => alert("Link Copied Successfully!"))
+        .catch(() => fallbackCopyText(memberUrl));
+    } else {
+      fallbackCopyText(memberUrl);
     }
   };
 
@@ -36,8 +52,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-blue-300 text-black px-6 py-10">
-      <h1 className="text-6xl font-bold mb-4 text-center mt-20">Nutan Vidyalaya</h1>
-      <h2 className="text-3xl mb-2 text-center">Past Students Association</h2>
+      <h1 className="text-6xl font-bold mb-4 text-center mt-20">Past Student's Association</h1>
+      <h2 className="text-4xl font-semibold mb-2 text-center">N V Society</h2>
       <h3 className="text-xl mb-10 text-center mb-38">Kalaburgi</h3>
 
       <div className="w-full max-w-4xl text-center p-8 rounded-lg shadow-lg bg-blue-200">
@@ -60,7 +76,7 @@ export default function HomePage() {
       </div>
 
       <div className="mt-8 flex flex-col items-center w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-2">Copy form link</h2>
+        <h2 className="text-lg font-semibold mb-2">Copy Data Update Form link</h2>
         <div className="flex w-full gap-2">
           <input
             type="text"
@@ -70,6 +86,24 @@ export default function HomePage() {
           />
           <button
             onClick={copyToClipboard}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8 flex flex-col items-center w-full max-w-md">
+        <h2 className="text-lg font-semibold mb-2">Copy New Life Membership link</h2>
+        <div className="flex w-full gap-2">
+          <input
+            type="text"
+            value={memberUrl}
+            disabled
+            className="w-full p-2 border border-gray-400 rounded-lg bg-gray-100 text-gray-700"
+          />
+          <button
+            onClick={copyToClipboard2}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Copy

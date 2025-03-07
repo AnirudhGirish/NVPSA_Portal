@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 
 export async function POST(req){
-    dbConnect()
+    await dbConnect()
     try {
         const {username, password} = await req.json();
         if(!username && !password){

@@ -2,7 +2,7 @@ import dbConnect from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 
 export async function GET(){
-    dbConnect();
+    await dbConnect();
 
     try {
         const responses = await Form.find().sort({ submittedAt: -1 });
