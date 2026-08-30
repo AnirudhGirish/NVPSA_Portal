@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "transport": "stdio",
+      "enabled": true,
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mongodb-js/mongodb-mcp-server",
+        "mongodb+srv://nvFormUser:formPassword@nvformcluster.1asoy.mongodb.net/test?retryWrites=true&w=majority"
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+# - Prefers thorough, file-by-file inspection of an entire codebase rather than spot-checking when auditing. Confidence: 0.8
+- Prefers thorough, file-by-file inspection of an entire codebase rather than spot-checking when auditing. Confidence: 0.8
+- Prefers audit/finding output to cite specific file paths and line references where relevant. Confidence: 0.8
+- Values a modern Next.js/React production stack: App Router, TypeScript, Tailwind CSS + shadcn/ui, TanStack Table v8, Zod, connection-cached Mongoose, and serverless-safe streaming exports. Confidence: 0.8
+- Prefers incremental, backward-compatible refactoring plans that preserve existing data-structure compatibility. Confidence: 0.7
+- Prefers fixes to be actually implemented end-to-end (security, data layer, modernization) rather than only audited/recommended. Confidence: 0.7
+- Prefers a post-fix summary report listing exactly what was changed and verified. Confidence: 0.8
+- Prefers URL-synchronized UI state via query parameters (useSearchParams/useRouter/useTransition) so filtered/sorted views are shareable, bookmarkable, and refresh-safe. Confidence: 0.8
+- Values feature-rich admin data grids: serial numbering, debounced global search with a keyboard shortcut, faceted filters, column-visibility toggles, and row selection with bulk operations. Confidence: 0.8
+- Prefers premium UI/UX polish: framer-motion animations, sonner toast notifications, animated skeleton loaders, and contextual empty states. Confidence: 0.8
+- Prefers sectioned forms with real-time inline validation, valid-state indicators, and a live duplicate-check on blur. Confidence: 0.7
+- Prefers a slate/zinc neutral palette with deep blue/indigo accents and subtle glassmorphism for navbars and cards. Confidence: 0.7
+- Prefers security hardening: regex-escaped search input (NoSQL/ReDoS safe), CSV/Excel formula-injection sanitization, per-IP rate limiting with Retry-After, and error/not-found boundaries. Confidence: 0.8
+- Prefers scoped exports (all/filtered/selected) with styled Excel output. Confidence: 0.7
+- Prefers incremental phase-by-phase implementation with TypeScript/ESLint/build verification after each phase. Confidence: 0.7
+- Prefers atomic counters (findOneAndUpdate with $inc + upsert) for sequential IDs rather than read-then-increment. Confidence: 0.8
+- Prefers idempotent, re-runnable migration scripts for data restructuring. Confidence: 0.8
+- Prefers verifying exact counts/state before destructive database operations (e.g., dropping a database only after confirmation). Confidence: 0.8
+- Prefers masking credentials/secrets in shell command output and logs. Confidence: 0.7
+- Prefers cleaning up test artifacts after verification so production data stays pristine. Confidence: 0.7
+- Prefers falling back to local Node scripts when MCP tools have operator/serialization limitations. Confidence: 0.6

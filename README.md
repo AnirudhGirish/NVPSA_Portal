@@ -1,132 +1,92 @@
 # NVPSA Portal
 
-NVPSA Portal is a robust and secure alumni management platform for the Nutan Vidyalaya Past Students Association. It enables users to submit their details via a dynamic, validated form, while providing administrators with a responsive dashboard to view, manage, and export collected data. Built with modern technologies, NVPSA Portal emphasizes security, performance, and user-friendly design.
-
----
-
-## Table of Contents
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
-
----
-
-## Features
-- **Alumni Form Submission:** Users can securely submit their details through a dynamic form validated with Zod.
-- **Admin Dashboard:** Administrators can view, filter, and export submissions in CSV or Excel formats.
-- **Secure Authentication:** Admin signup, sign-in, and sign-out functionalities are implemented using JWT and secure httpOnly cookies.
-- **Responsive Design:** Built with Tailwind CSS, ensuring a modern, responsive UI across all devices.
-- **Server-Side Rendering (SSR):** Critical pages like the landing page are rendered on the server for improved performance and SEO.
-- **Clipboard Functionality:** Easily copy the form link for sharing purposes.
+NVPSA Portal is a robust and secure alumni management platform for the Nutan Vidyalaya Past Students Association. It enables users to submit their details via a dynamic, validated form, while providing administrators with a responsive dashboard to view, manage, and export collected data.
 
 ---
 
 ## Tech Stack
-- **Frontend:** Next.js (React), Tailwind CSS, React Hook Form, Zod
-- **Backend:** Next.js API Routes, MongoDB, Mongoose
-- **Authentication:** JWT, bcryptjs for password hashing, secure httpOnly cookies
-- **Utilities:** json2csv, ExcelJS, (optional: pdf-lib for PDF exports)
+
+- **Frontend:** Next.js 15 (App Router), React 19, TypeScript (strict), Tailwind CSS v4, shadcn/ui (Base UI), TanStack Table v8, React Hook Form, Zod, framer-motion, sonner
+- **Backend:** Next.js Route Handlers, MongoDB, Mongoose 8 (global connection cache)
+- **Authentication:** JWT in httpOnly cookies, bcryptjs password hashing
+- **Exports:** ExcelJS (CSV + styled XLSX, formula-injection sanitization)
 
 ---
 
 ## Installation
-1. **Clone the repository:**
+
+1. **Clone and install**
    ```bash
-   git clone https://github.com/yourusername/nvpsa-portal.git
-   cd nvpsa-portal
+   npm install
    ```
-2. **Install dependencies:**
-    ```bash
-    npm install
-    ```
-3. **Set up environment variables:**
+2. **Environment variables** — copy `.env.example` to `.env.local`:
+   ```
+   MONGODB_URI=your_mongodb_connection_string
+   TOKEN_SECRET=your_jwt_secret_key
+   ALLOW_SIGNUP=false
+   ```
+   Set `ALLOW_SIGNUP=true` only when creating your first admin account, then disable it.
 
-    Create a `.env.local file` in the root directory with the following content:
-    ```bash
-    MONGODB_URI=your_mongodb_connection_string
-    TOKEN_SECRET=your_jwt_secret_key
-    ```
-4. **Run the development server:**
-    ```bash
-    npm run dev
-    ```
-    Open http://localhost:3000 in your browser.
+3. **Run**
+   ```bash
+   npm run dev
+   ```
+
+> Note: if your shell sets `NODE_ENV=production` globally, run `NODE_ENV=development npm run dev` for local development.
 
 ---
-## Configuration
 
-- **Database**: Use MongoDB (Atlas or local) and update the MONGODB_URI in .env.local.
-- **JWT Authentication**: Set the TOKEN_SECRET to secure your JWT tokens.
-- **Deployment**: Configure your environment variables on your hosting platform (e.g., Vercel).
+## Scripts
 
----
-## Usage
-
-- Landing Page: Provides an introduction to the NVPSA Portal with calls to action for signing in or submitting the form.
-- Form Submission: Users fill out and submit their data via a dynamic, validated form.
-- Admin Dashboard: Authenticated admins can access the dashboard to view submissions and export data.
-- Authentication: Admin routes are protected using secure cookies and server-side authentication middleware.
+- `npm run dev` — development server
+- `npm run build` — production build (includes typecheck + lint)
+- `npm run start` — serve production build
+- `npm run lint` — ESLint
+- `npm run typecheck` — TypeScript strict check
 
 ---
+
 ## API Endpoints
 
-- POST `/api/form`
+### Public
 
-    Submits form data after Zod validation and saves it to MongoDB.
-- GET `/api/fetch`
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/form` | POST | Submit member data (Zod validated, rate limited 10/min/IP) |
+| `/api/form/check?number=` | GET | Live duplicate phone check (returns `{ exists }`) |
 
-    Fetches all submitted form data for the admin dashboard.
-- GET `/api/export`
+### Authenticated (JWT httpOnly cookie)
 
-    Exports form data in CSV or Excel formats.
-- POST `/api/sign-up`
-
-    Registers a new admin user.
-- POST `/api/sign-in`
-
-    Authenticates an admin user and sets a secure token cookie.
-- POST `/api/sign-out`
-
-    Clears the authentication cookie to sign out an admin.
----
-## Authentication
-
-**NVPSA Portal uses JWT-based authentication:**
-
-- Admin Signup: Create an account with secure credentials.
-- Admin Sign-In: Authenticate using your email/username and password.
-- Token Security: Tokens are stored as httpOnly cookies, ensuring they cannot be accessed via client-side JavaScript.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/fetch` | GET | Paginated + filtered member list. Params: `page`, `pageSize` (10/25/50/100), `search`, `sortBy`, `sortOrder`, `pass` (repeatable), `year` (repeatable), `yearRange` |
+| `/api/fetch/ids` | GET | All matching ids for current filter (bulk operations, capped at 5000) |
+| `/api/stats` | GET | Dashboard KPIs (total, batches, recent signups, branch breakdown) |
+| `/api/export` | GET | Export with `format=csv\|xlsx` and `scope=all\|filtered\|selected` |
+| `/api/members/[id]` | GET/PATCH/DELETE | Member detail, update (Zod validated), delete |
+| `/api/members/bulk-delete` | POST | Bulk delete with `{ ids: string[] }` (500 max per call) |
+| `/api/sign-up` | POST | Register admin (gated by `ALLOW_SIGNUP`) |
+| `/api/sign-in` | POST | Authenticate; sets httpOnly JWT cookie |
+| `/api/sign-out` | POST | Clears auth cookie |
 
 ---
-## Contributing
 
-**Contributions are welcome!**
+## Admin Dashboard Features
 
-- Fork the repository.
-- Create a feature branch: `git checkout -b feature/YourFeature`
-- Commit your changes: `git commit -m 'Add new feature'`
-- Push to your branch: `git push origin feature/YourFeature`
-- Open a pull request for review.
-
---- 
-## Acknowledgements
-
-- Inspiration: NVPSA Portal was inspired by the need for efficient and secure alumni data management.
-- Open Source: Thanks to the open-source community for the amazing libraries and tools that made this project possible.
-- Special Mentions: Big shout-out to all contributors and supporters of the project.
+- URL-synchronized state (shareable/bookmarkable filtered views): `search`, `page`, `pageSize`, `sortBy`, `sortOrder`, `pass`, `year`
+- Debounced global search with ⌘K/Ctrl+K shortcut
+- Faceted filters (graduation year, pass/branch) with active badges + reset
+- Column visibility toggle, sortable columns, serial numbering
+- Row selection with "Select all matching results" + floating bulk bar (bulk export/delete)
+- KPI stat cards, member detail slide-over, inline edit dialog, two-step deletion
+- Animated skeletons, empty states, offline detection, rate-limit feedback
 
 ---
-## Contact Me
 
-Contact me for help or advices at anirudhgirish08@gmail.com 
+## Security
 
----
-**Enjoy using NVPSA Portal! 🚀**
+- All admin endpoints require a valid JWT in an httpOnly, sameSite=lax cookie (secure in production)
+- Server-side Zod validation on every write path
+- Regex-escaped search (NoSQL/ReDoS safe), CSV formula-injection sanitization
+- Per-IP rate limiting with `Retry-After` headers
+- `ALLOW_SIGNUP` gate prevents public admin registration
