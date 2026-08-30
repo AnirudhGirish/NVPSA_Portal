@@ -78,7 +78,7 @@ const SORTABLE_COLUMNS: { id: string; label: string }[] = [
 
 function SerialCell({ serialNumber }: { serialNumber?: number }) {
   return (
-    <span className="font-semibold text-indigo-600 tabular-nums">
+    <span className="font-semibold text-navy tabular-nums">
       #{serialNumber ?? "—"}
     </span>
   );
@@ -359,15 +359,15 @@ export default function AdminDashboard() {
   const visibleRows = table.getRowModel().rows;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100">
+    <div className="min-h-screen bg-grid">
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 backdrop-blur-lg">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-600/10">
-              <User className="size-5 text-indigo-600" />
+            <div className="flex size-9 items-center justify-center rounded-lg bg-navy ring-2 ring-heritage/30">
+              <User className="size-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Admin Dashboard</h1>
+              <h1 className="text-lg font-bold text-navy">Admin Dashboard</h1>
               <p className="text-xs text-slate-500">NV Past Students Association</p>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StatCards />
 
-        <div className="mt-6 rounded-2xl border border-slate-200/70 bg-white/85 shadow-xl shadow-indigo-100/40 backdrop-blur">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-institutional-lg">
           <div className="flex flex-col gap-3 border-b border-slate-200/70 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative w-full sm:w-72">
@@ -698,14 +698,14 @@ export default function AdminDashboard() {
                               <button
                                 type="button"
                                 onClick={() => header.column.toggleSorting()}
-                                className="inline-flex items-center gap-1 hover:text-indigo-700"
+                                className="inline-flex items-center gap-1 hover:text-navy"
                                 aria-label={`Sort by ${header.column.columnDef.header}`}
                               >
                                 {flexRender(header.column.columnDef.header, header.getContext())}
                                 {sortState === "desc" ? (
-                                  <span className="text-indigo-600">↓</span>
+                                  <span className="text-navy">↓</span>
                                 ) : sortState === "asc" ? (
-                                  <span className="text-indigo-600">↑</span>
+                                  <span className="text-navy">↑</span>
                                 ) : (
                                   <ChevronsUpDown className="size-3.5 text-slate-300" />
                                 )}
@@ -821,7 +821,7 @@ export default function AdminDashboard() {
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
           >
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl">
+            <div className="flex items-center gap-3 rounded-2xl bg-navy px-4 py-3 text-white shadow-institutional-lg">
               <span className="text-sm font-medium">{selectedCount} selected</span>
               <Button
                 size="sm"

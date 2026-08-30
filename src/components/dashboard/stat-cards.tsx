@@ -49,16 +49,16 @@ function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3 }}
     >
-      <Card className="border-slate-200/70 bg-white/80 shadow-sm backdrop-blur">
+      <Card className="border-slate-200/70 bg-white shadow-institutional">
         <CardContent className="flex items-center gap-4 p-5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10">
-            <Icon className="size-5 text-indigo-600" />
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-navy/5">
+            <Icon className="size-5 text-navy" />
           </div>
           <div className="min-w-0">
             {loading ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              <p className="text-2xl font-bold text-slate-900">{value}</p>
+              <p className="text-2xl font-bold text-navy">{value}</p>
             )}
             <p className="truncate text-xs text-slate-500">{label}</p>
           </div>
@@ -133,9 +133,9 @@ export function StatCards() {
         transition={{ delay: 0.3, duration: 0.3 }}
         className="sm:col-span-2"
       >
-        <Card className="border-slate-200/70 bg-white/80 shadow-sm backdrop-blur">
+        <Card className="border-slate-200/70 bg-white shadow-institutional">
           <CardContent className="p-5">
-            <p className="text-sm font-medium text-slate-700">Era Breakdown</p>
+            <p className="text-sm font-medium text-navy">Era Breakdown</p>
             {loading ? (
               <div className="mt-3 space-y-2">
                 {[0, 1, 2].map((i) => (
@@ -154,7 +154,7 @@ export function StatCards() {
                           initial={{ width: 0 }}
                           animate={{ width: `${(era.count / max) * 100}%` }}
                           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                          className="h-full rounded-full bg-indigo-500"
+                          className="h-full rounded-full bg-navy"
                         />
                       </div>
                       <span className="w-10 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-900">
@@ -175,13 +175,13 @@ export function StatCards() {
         transition={{ delay: 0.36, duration: 0.3 }}
         className="sm:col-span-2"
       >
-        <Card className="border-slate-200/70 bg-white/80 shadow-sm backdrop-blur">
+        <Card className="border-slate-200/70 bg-white shadow-institutional">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10">
-              <GraduationCap className="size-5 text-indigo-600" />
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-navy/5">
+              <GraduationCap className="size-5 text-navy" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-700">Branch Breakdown</p>
+              <p className="text-sm font-medium text-navy">Branch Breakdown</p>
               {loading ? (
                 <div className="mt-2 space-y-1.5">
                   {[0, 1, 2, 3].map((i) => (
@@ -193,7 +193,7 @@ export function StatCards() {
                   {Object.entries(stats?.branchBreakdown ?? {}).map(([branch, count]) => (
                     <span
                       key={branch}
-                      className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-100"
+                      className="rounded-full bg-heritage/5 px-3 py-1 text-xs font-medium text-heritage-dark ring-1 ring-heritage/20"
                     >
                       {branch}: {count}
                     </span>

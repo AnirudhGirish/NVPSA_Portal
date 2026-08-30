@@ -2,10 +2,10 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
 const QUICK_LINKS = [
-  { label: "About Association", href: "/about" },
-  { label: "Register Data", href: "/form" },
-  { label: "Admin Sign In", href: "/signin" },
-  { label: "Documentation", href: "/docs" },
+  // { label: "About Association", href: "/about" },
+  // { label: "Register Data", href: "/form" },
+  // { label: "Admin Sign In", href: "/signin" },
+  // { label: "Documentation", href: "/docs" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms of Service", href: "/terms" },
 ];
@@ -31,8 +31,10 @@ export function SiteFooter() {
               </div>
             </div>
             <p className="text-sm leading-relaxed text-slate-400">
-              Nutan Vidyalaya Society Campus,<br />
-              Samarth Nagar, Kalaburagi,<br />
+              Nutan Vidyalaya Society Campus,
+              <br />
+              Sangameshwar Colony, Kalaburagi,
+              <br />
               Karnataka – 585102, India
             </p>
           </div>

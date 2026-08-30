@@ -61,10 +61,10 @@ export function MemberDetailSheet({
         {member && (
           <>
             <SheetHeader>
-              <div className="flex size-12 items-center justify-center rounded-xl bg-indigo-600/10">
-                <User className="size-6 text-indigo-600" />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-navy/5">
+                <User className="size-6 text-navy" />
               </div>
-              <SheetTitle className="text-xl font-bold text-slate-900">
+              <SheetTitle className="text-xl font-bold text-navy">
                 {member.name}
               </SheetTitle>
               <SheetDescription>
@@ -143,7 +143,7 @@ export function MemberDetailSheet({
 
               <div className="flex gap-2">
                 <Button
-                  className="flex-1"
+                  className="flex-1 bg-navy text-white hover:bg-navy-light"
                   onClick={() => {
                     onOpenChange(false);
                     onEdit(member);
@@ -244,7 +244,7 @@ export function EditMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Member</DialogTitle>
+          <DialogTitle className="text-navy">Edit Member</DialogTitle>
           <DialogDescription>
             Update the member&apos;s details. All fields are validated.
           </DialogDescription>
