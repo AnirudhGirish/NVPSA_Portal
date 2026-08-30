@@ -34,6 +34,7 @@ import {
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 import type { FormRow } from "@/lib/fetch";
+import { matchesAlumniSearch } from "@/lib/alumni-search";
 import { useAlumniCache } from "@/hooks/use-alumni-cache";
 import { useOnlineStatus } from "@/hooks/use-online";
 import { Button } from "@/components/ui/button";
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [sorting, setSorting] = useState<SortingState>([
+  const [userSorting, setUserSorting] = useState<SortingState>([
     { id: "serialNumber", desc: true },
   ]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -200,8 +201,27 @@ export default function AdminDashboard() {
       { id: "year", accessorFn: (row) => row.year ?? "", header: "Year" },
     ];
 
-    return [selectCol, ...dataCols];
-  }, []);
+    // Hidden column that ranks exact Member ID matches first when the
+    // search query is numeric (mirrors the server-side aggregation).
+    const rankCol: ColumnDef<FormRow> = {
+      id: "_exactSerialMatch",
+      accessorFn: (row) => {
+        const query = globalFilter.trim();
+        if (!/^\d+$/.test(query)) return 0;
+        return row.serialNumber === Number(query) ? 0 : 1;
+      },
+      enableHiding: true,
+    };
+
+    return [selectCol, ...dataCols, rankCol];
+  }, [globalFilter]);
+
+  // Exact Member ID matches always rank first when searching a number;
+  // user column sorting applies within that rank group.
+  const sorting = useMemo<SortingState>(
+    () => [{ id: "_exactSerialMatch", desc: false }, ...userSorting],
+    [userSorting]
+  );
 
   const table = useReactTable({
     data: rows,
@@ -209,10 +229,11 @@ export default function AdminDashboard() {
     state: { globalFilter, columnFilters, sorting, pagination, rowSelection },
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
-    onSortingChange: setSorting,
+    onSortingChange: setUserSorting,
     onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
-    globalFilterFn: "auto",
+    globalFilterFn: (row, _columnId, filterValue) =>
+      matchesAlumniSearch(row.original, String(filterValue ?? "")),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -424,13 +445,13 @@ export default function AdminDashboard() {
               <div className="flex rounded-lg border border-input">
                 <Button
                   variant={
-                    sorting[0]?.id === "serialNumber" && sorting[0]?.desc
+                    userSorting[0]?.id === "serialNumber" && userSorting[0]?.desc
                       ? "secondary"
                       : "ghost"
                   }
                   size="sm"
                   className="rounded-none rounded-l-lg"
-                  onClick={() => setSorting([{ id: "serialNumber", desc: true }])}
+                  onClick={() => setUserSorting([{ id: "serialNumber", desc: true }])}
                   title="Newest first (#564 → #1)"
                 >
                   <ArrowDownNarrowWide className="size-4" />
@@ -438,13 +459,13 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant={
-                    sorting[0]?.id === "serialNumber" && !sorting[0]?.desc
+                    userSorting[0]?.id === "serialNumber" && !userSorting[0]?.desc
                       ? "secondary"
                       : "ghost"
                   }
                   size="sm"
                   className="rounded-none rounded-r-lg"
-                  onClick={() => setSorting([{ id: "serialNumber", desc: false }])}
+                  onClick={() => setUserSorting([{ id: "serialNumber", desc: false }])}
                   title="Oldest first (#1 → #564)"
                 >
                   <ArrowUpNarrowWide className="size-4" />
@@ -662,37 +683,39 @@ export default function AdminDashboard() {
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const sortable = SORTABLE_COLUMNS.some((c) => c.id === header.column.id);
-                      const sortState = header.column.getIsSorted();
-                      return (
-                        <TableHead
-                          key={header.id}
-                          className="whitespace-nowrap"
-                          style={{ width: header.column.columnDef.size }}
-                        >
-                          {sortable ? (
-                            <button
-                              type="button"
-                              onClick={() => header.column.toggleSorting()}
-                              className="inline-flex items-center gap-1 hover:text-indigo-700"
-                              aria-label={`Sort by ${header.column.columnDef.header}`}
-                            >
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                              {sortState === "desc" ? (
-                                <span className="text-indigo-600">↓</span>
-                              ) : sortState === "asc" ? (
-                                <span className="text-indigo-600">↑</span>
-                              ) : (
-                                <ChevronsUpDown className="size-3.5 text-slate-300" />
-                              )}
-                            </button>
-                          ) : (
-                            flexRender(header.column.columnDef.header, header.getContext())
-                          )}
-                        </TableHead>
-                      );
-                    })}
+                    {headerGroup.headers
+                      .filter((header) => header.column.id !== "_exactSerialMatch")
+                      .map((header) => {
+                        const sortable = SORTABLE_COLUMNS.some((c) => c.id === header.column.id);
+                        const sortState = header.column.getIsSorted();
+                        return (
+                          <TableHead
+                            key={header.id}
+                            className="whitespace-nowrap"
+                            style={{ width: header.column.columnDef.size }}
+                          >
+                            {sortable ? (
+                              <button
+                                type="button"
+                                onClick={() => header.column.toggleSorting()}
+                                className="inline-flex items-center gap-1 hover:text-indigo-700"
+                                aria-label={`Sort by ${header.column.columnDef.header}`}
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {sortState === "desc" ? (
+                                  <span className="text-indigo-600">↓</span>
+                                ) : sortState === "asc" ? (
+                                  <span className="text-indigo-600">↑</span>
+                                ) : (
+                                  <ChevronsUpDown className="size-3.5 text-slate-300" />
+                                )}
+                              </button>
+                            ) : (
+                              flexRender(header.column.columnDef.header, header.getContext())
+                            )}
+                          </TableHead>
+                        );
+                      })}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -720,11 +743,14 @@ export default function AdminDashboard() {
                       }}
                       className="cursor-pointer"
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
+                      {row
+                        .getVisibleCells()
+                        .filter((cell) => cell.column.id !== "_exactSerialMatch")
+                        .map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
                     </TableRow>
                   ))
                 ) : (
