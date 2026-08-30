@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { formSchema } from "@/schemas/form.schema";
 import { rateLimit } from "@/utils/rateLimit";
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     return rateLimitedResponse();
   }
 
-  await dbConnect();
+  await connectDB();
 
   let body: unknown;
   try {

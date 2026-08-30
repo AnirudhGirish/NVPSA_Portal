@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { verifyAdminToken, AUTH_COOKIE_NAME } from "@/utils/auth";
 import AdminDashboard from "./admin-dashboard";
 
@@ -12,7 +12,7 @@ export default async function DashboardPage() {
     redirect("/signin");
   }
 
-  await dbConnect();
+  await connectDB();
 
   return <AdminDashboard />;
 }

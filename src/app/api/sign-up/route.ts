@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Admin } from "@/models/admin.model";
 import { adminSchema } from "@/schemas/admin.schema";
 import bcrypt from "bcryptjs";
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     );
   }
 
-  await dbConnect();
+  await connectDB();
 
   let body: unknown;
   try {

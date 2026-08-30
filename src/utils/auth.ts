@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { Admin } from "@/models/admin.model";
 import type { AdminTokenPayload } from "@/types";
+import { connectDB } from "@/utils/dbconnect";
 
 export const AUTH_COOKIE_NAME = "token";
 
@@ -54,6 +55,10 @@ export async function requireAdmin(): Promise<AdminTokenPayload | null> {
   if (!payload) {
     return null;
   }
+
+  // Establish the DB connection BEFORE touching the Admin model so the
+  // query below never hits Mongoose's default 10s buffering timeout.
+  await connectDB();
 
   const admin = await Admin.exists({ _id: payload.id });
   if (!admin) {

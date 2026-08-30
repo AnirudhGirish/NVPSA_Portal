@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import {
   buildFormFilter,
@@ -18,12 +18,12 @@ import { requireAdmin } from "@/utils/auth";
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export async function GET(req: Request) {
+  await connectDB();
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
-
-  await dbConnect();
 
   const { searchParams } = new URL(req.url);
 

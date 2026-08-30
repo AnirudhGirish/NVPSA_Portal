@@ -110,6 +110,7 @@ export default function AdminDashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [searchInput, setSearchInput] = useState(state.search);
   const [debouncedSearch, setDebouncedSearch] = useState(state.search);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [state, router]);
+  }, [state, router, reloadKey]);
 
   const columns = useMemo<ColumnDef<FormRow>[]>(() => {
     const base: ColumnDef<FormRow>[] = [
@@ -444,6 +445,24 @@ export default function AdminDashboard() {
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StatCards />
+
+        {error && (
+          <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-medium text-red-700">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                setError(null);
+                setReloadKey((k) => k + 1);
+              }}
+            >
+              <RotateCcw className="size-3.5" />
+              Retry
+            </Button>
+          </div>
+        )}
 
         <div className="mt-6 rounded-2xl border border-slate-200/70 bg-white/85 shadow-xl shadow-indigo-100/40 backdrop-blur">
           <div className="flex flex-col gap-3 border-b border-slate-200/70 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -953,12 +972,6 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </motion.div>
-        </div>
-      )}
-
-      {error && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-red-600 px-4 py-3 text-sm font-medium text-white shadow-xl">
-          {error}
         </div>
       )}
     </div>

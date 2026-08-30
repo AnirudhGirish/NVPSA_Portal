@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { isValidObjectId } from "mongoose";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { requireAdmin } from "@/utils/auth";
 
 const MAX_BULK_DELETE = 500;
 
 export async function POST(req: Request) {
-  await dbConnect();
+  await connectDB();
 
   const admin = await requireAdmin();
   if (!admin) {

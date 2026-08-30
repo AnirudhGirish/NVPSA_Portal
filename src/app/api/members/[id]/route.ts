@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { formSchema } from "@/schemas/form.schema";
 import { requireAdmin } from "@/utils/auth";
@@ -9,7 +9,7 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
+  await connectDB();
 
   const admin = await requireAdmin();
   if (!admin) {
@@ -37,7 +37,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
+  await connectDB();
 
   const admin = await requireAdmin();
   if (!admin) {
@@ -102,7 +102,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
+  await connectDB();
 
   const admin = await requireAdmin();
   if (!admin) {

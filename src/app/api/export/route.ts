@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { isValidObjectId } from "mongoose";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { requireAdmin } from "@/utils/auth";
 import { buildFormFilter, sanitizeFormRow, isPassValue } from "@/lib/query";
@@ -18,12 +18,12 @@ const EXCEL_COLUMNS: Partial<ExcelJS.Column>[] = [
 ];
 
 export async function GET(req: Request) {
+  await connectDB();
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
-
-  await dbConnect();
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get("format");

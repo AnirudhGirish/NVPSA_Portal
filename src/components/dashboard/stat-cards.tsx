@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, GraduationCap, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, GraduationCap, RotateCcw, TrendingUp, Users } from "lucide-react";
 import { fetchStats, type DashboardStats } from "@/lib/fetch";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,20 +23,29 @@ const METRICS = [
 
 export function StatCards() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let cancelled = false;
+    setStatsError(false);
+    setStats(null);
     fetchStats()
       .then((data) => {
         if (!cancelled) setStats(data);
       })
       .catch(() => {
-        if (!cancelled) setStats(EMPTY_STATS);
+        if (!cancelled) {
+          setStats(EMPTY_STATS);
+          setStatsError(true);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => load(), [load, reloadKey]);
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -101,6 +111,29 @@ export function StatCards() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {statsError && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sm:col-span-3"
+        >
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-medium text-red-700">
+              Could not load dashboard statistics.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setReloadKey((k) => k + 1)}
+            >
+              <RotateCcw className="size-3.5" />
+              Retry
+            </Button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

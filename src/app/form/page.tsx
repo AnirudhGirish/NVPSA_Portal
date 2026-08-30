@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, Loader2, Phone, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, GraduationCap, Loader2, Phone, XCircle } from "lucide-react";
+import Link from "next/link";
 import { formSchema, type FormInput } from "@/schemas/form.schema";
 import { checkPhoneExists } from "@/lib/fetch";
 import { Button } from "@/components/ui/button";
@@ -122,7 +123,29 @@ export default function FormPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100 p-4 sm:p-6 lg:p-10">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100">
+      <nav className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-600/10">
+              <GraduationCap className="size-5 text-indigo-600" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-slate-900">NVPSA</p>
+              <p className="text-[11px] text-slate-500">Past Students Association</p>
+            </div>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Home
+          </Link>
+        </div>
+      </nav>
+
+      <div className="p-4 sm:p-6 lg:p-10">
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -340,6 +363,7 @@ export default function FormPage() {
           </CardContent>
         </Card>
       </motion.div>
+      </div>
     </div>
   );
 }

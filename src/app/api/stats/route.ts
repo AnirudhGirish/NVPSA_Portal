@@ -1,16 +1,26 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { PASS_VALUES } from "@/lib/query";
 import { requireAdmin } from "@/utils/auth";
 
+const ZERO_STATS = {
+  totalAlumni: 0,
+  uniqueBatches: 0,
+  recentSignups: 0,
+  branchBreakdown: Object.fromEntries(PASS_VALUES.map((p) => [p, 0])) as Record<
+    string,
+    number
+  >,
+};
+
 export async function GET() {
+  await connectDB();
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
-
-  await dbConnect();
 
   try {
     const since = new Date();
@@ -47,10 +57,10 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error computing stats", error);
+    console.error("Error computing stats, returning zero-value fallback:", error);
     return NextResponse.json(
-      { success: false, message: "Could not compute dashboard statistics" },
-      { status: 500 }
+      { success: true, stats: ZERO_STATS, degraded: true },
+      { status: 200 }
     );
   }
 }

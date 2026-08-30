@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/utils/dbconnect";
+import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import { requireAdmin } from "@/utils/auth";
 import { buildFormFilter, isPassValue } from "@/lib/query";
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  await dbConnect();
+  await connectDB();
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.trim() ?? undefined;

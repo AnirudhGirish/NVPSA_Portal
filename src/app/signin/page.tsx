@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2, LogIn } from "lucide-react";
+import { ArrowLeft, Loader2, LogIn } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { adminSignInSchema, type AdminSignInInput } from "@/schemas/adminSignIn.schema";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,15 @@ export default function AdminSignin() {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Home
+          </Link>
+        </div>
         <Card className="border-slate-200/80 bg-white/85 shadow-xl shadow-indigo-100/50 backdrop-blur">
           <CardHeader className="text-center">
             <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-indigo-600/10">

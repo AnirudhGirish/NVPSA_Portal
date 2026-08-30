@@ -6,31 +6,33 @@ type MongooseConnection = {
 };
 
 declare global {
-  var mongooseCache: MongooseConnection | undefined;
+  var _mongoose: MongooseConnection | undefined;
 }
 
-const cached: MongooseConnection = global.mongooseCache ?? {
+const cached: MongooseConnection = global._mongoose ?? {
   conn: null,
   promise: null,
 };
 
-if (!global.mongooseCache) {
-  global.mongooseCache = cached;
+if (!global._mongoose) {
+  global._mongoose = cached;
 }
 
-async function dbConnect(): Promise<typeof mongoose> {
+async function connectDB(): Promise<typeof mongoose> {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     throw new Error("Please define MONGODB_URI in the environment");
   }
 
-  if (cached.conn) {
+  if (cached.conn && cached.conn.connection.readyState === 1) {
     return cached.conn;
   }
 
   if (!cached.promise) {
-    const opts = {
+    const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
     };
 
     cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
@@ -49,4 +51,5 @@ async function dbConnect(): Promise<typeof mongoose> {
   return cached.conn;
 }
 
-export default dbConnect;
+export { connectDB };
+export default connectDB;
