@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { adminSignInSchema, type AdminSignInInput } from "@/schemas/adminSignIn.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +29,12 @@ export default function AdminSignin() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Prefetch the dashboard bundle and RSC payload while the admin types,
+  // so navigation after sign-in is instant.
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
+
   const onSubmit = async (data: AdminSignInInput) => {
     try {
       setErrorMessage(null);
@@ -45,7 +50,7 @@ export default function AdminSignin() {
         throw new Error(result.message || "Signin failed");
       }
 
-      toast.success("Signed in successfully");
+      // Navigate immediately — no toast or await before redirect.
       router.push("/dashboard");
       router.refresh();
     } catch (error) {

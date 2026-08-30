@@ -181,7 +181,6 @@ export function EditMemberDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: (updated: FormRow) => void;
 }) {
-  const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -208,8 +207,23 @@ export function EditMemberDialog({
 
   const onSubmit = async (data: FormInput) => {
     if (!member?._id) return;
-    setSaving(true);
     setErrorMessage(null);
+
+    // Optimistic: apply the change to the local cache immediately, then
+    // persist to the server in the background.
+    const optimistic: FormRow = {
+      ...member,
+      name: data.name,
+      number: data.number,
+      email: data.email || undefined,
+      address: data.address,
+      aadhar: data.aadhar || undefined,
+      pass: (data.pass as FormRow["pass"]) || "",
+      year: data.year || undefined,
+    };
+    onSaved(optimistic);
+    onOpenChange(false);
+
     try {
       const response = await fetch(`/api/members/${member._id}`, {
         method: "PATCH",
@@ -221,12 +235,8 @@ export function EditMemberDialog({
         throw new Error(result.message || "Could not update member");
       }
       toast.success("Member updated");
-      onSaved({ ...member, ...data } as FormRow);
-      onOpenChange(false);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not update member");
-    } finally {
-      setSaving(false);
+      toast.error(error instanceof Error ? error.message : "Could not update member");
     }
   };
 
@@ -323,8 +333,8 @@ export function EditMemberDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
+            <Button type="submit">
+              Save Changes
             </Button>
           </DialogFooter>
         </form>
@@ -342,28 +352,29 @@ export function DeleteMemberDialog({
   member: FormRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDeleted: () => void;
+  onDeleted: (id: string) => void;
 }) {
-  const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const confirmDelete = async () => {
     if (!member?._id) return;
-    setDeleting(true);
     setErrorMessage(null);
+
+    // Optimistic: remove from the local cache immediately, then delete on
+    // the server in the background.
+    const memberId = member._id;
+    onDeleted(memberId);
+    onOpenChange(false);
+
     try {
-      const response = await fetch(`/api/members/${member._id}`, { method: "DELETE" });
+      const response = await fetch(`/api/members/${memberId}`, { method: "DELETE" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(result.message || "Could not delete member");
       }
       toast.success("Member deleted");
-      onDeleted();
-      onOpenChange(false);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not delete member");
-    } finally {
-      setDeleting(false);
+      toast.error(error instanceof Error ? error.message : "Could not delete member");
     }
   };
 
@@ -388,8 +399,8 @@ export function DeleteMemberDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={confirmDelete} disabled={deleting}>
-            {deleting ? "Deleting..." : "Delete Permanently"}
+          <Button type="button" variant="destructive" onClick={confirmDelete}>
+            Delete Permanently
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -90,6 +90,24 @@ export async function fetchForms(params: FetchParams): Promise<PaginatedResponse
   return result as PaginatedResponse;
 }
 
+export async function fetchAllForms(): Promise<FormRow[]> {
+  const response = await fetch("/api/fetch?all=true", { cache: "no-store" });
+
+  if (response.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch data");
+  }
+
+  const result = await response.json();
+  if (!Array.isArray(result.responses)) {
+    throw new Error("Invalid data format");
+  }
+  return result.responses as FormRow[];
+}
+
 export async function fetchStats(): Promise<DashboardStats> {
   const response = await fetch("/api/stats", { cache: "no-store" });
   if (!response.ok) {

@@ -13,7 +13,7 @@ import {
   Download,
   Filter,
   Loader2,
-  Plus,
+  RefreshCw,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -23,12 +23,18 @@ import {
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type ColumnFiltersState,
+  type PaginationState,
+  type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { fetchForms, type FormRow, type FetchParams } from "@/lib/fetch";
-import { useGridUrlState } from "@/hooks/use-grid-url-state";
+import type { FormRow } from "@/lib/fetch";
+import { useAlumniCache } from "@/hooks/use-alumni-cache";
 import { useOnlineStatus } from "@/hooks/use-online";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,13 +55,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import {
@@ -64,22 +63,16 @@ import {
   DeleteMemberDialog,
 } from "@/components/dashboard/member-actions";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE = 25;
 const PASS_VALUES = ["SSLC", "PUC", "Degree", "Others"];
 const YEARS = Array.from({ length: 86 }, (_, i) => 1940 + i);
 
-/**
- * Sortable data columns. Each has an explicit `id`, a display label, and the
- * backend sort field (aliases like `phone` are mapped server-side).
- */
-const SORTABLE_COLUMNS: { id: string; label: string; sortField: string }[] = [
-  { id: "serialNumber", label: "Member ID", sortField: "serialNumber" },
-  { id: "name", label: "Name", sortField: "name" },
-  { id: "number", label: "Phone", sortField: "phone" },
-  { id: "email", label: "Email", sortField: "email" },
-  { id: "address", label: "Address", sortField: "address" },
-  { id: "pass", label: "Education", sortField: "education" },
-  { id: "year", label: "Year", sortField: "year" },
+const SORTABLE_COLUMNS: { id: string; label: string }[] = [
+  { id: "serialNumber", label: "Member ID" },
+  { id: "name", label: "Name" },
+  { id: "number", label: "Phone" },
+  { id: "email", label: "Email" },
+  { id: "year", label: "Year" },
 ];
 
 function SerialCell({ serialNumber }: { serialNumber?: number }) {
@@ -90,23 +83,39 @@ function SerialCell({ serialNumber }: { serialNumber?: number }) {
   );
 }
 
+function formatRelative(date: Date | null): string {
+  if (!date) return "—";
+  const diffMs = Date.now() - date.getTime();
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const isOnline = useOnlineStatus();
-  const { state, update, isPending } = useGridUrlState();
+  const { rows, updatedAt, loading, fromCache, sync, updateRow, removeRow } =
+    useAlumniCache();
 
-  const [data, setData] = useState<FormRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [searchInput, setSearchInput] = useState(state.search);
-  const [debouncedSearch, setDebouncedSearch] = useState(state.search);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "serialNumber", desc: true },
+  ]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: PAGE_SIZE,
+  });
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   const [exportFormat, setExportFormat] = useState("csv");
   const [exporting, setExporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const [detailMember, setDetailMember] = useState<FormRow | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -118,30 +127,25 @@ export default function AdminDashboard() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  const [matchAllIds, setMatchAllIds] = useState<Set<string> | null>(null);
-  const [fetchingMatchIds, setFetchingMatchIds] = useState(false);
-
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const passFilter = useMemo(
+    () => (columnFilters.find((f) => f.id === "pass")?.value as string[]) ?? [],
+    [columnFilters]
+  );
+  const yearFilter = useMemo(
+    () => (columnFilters.find((f) => f.id === "year")?.value as string[]) ?? [],
+    [columnFilters]
+  );
+
   const hasActiveFilters =
-    state.search.length > 0 || state.pass.length > 0 || state.year.length > 0 || Boolean(state.yearRange);
+    globalFilter.length > 0 || passFilter.length > 0 || yearFilter.length > 0;
 
   const resetFilters = useCallback(() => {
-    update(
-      { search: "", pass: [], year: [], yearRange: undefined, page: 1 },
-      { resetPage: true }
-    );
-  }, [update]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedSearch(searchInput), 300);
-    return () => clearTimeout(handler);
-  }, [searchInput]);
-
-  useEffect(() => {
-    update({ search: debouncedSearch }, { resetPage: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch]);
+    setGlobalFilter("");
+    setColumnFilters([]);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -156,59 +160,6 @@ export default function AdminDashboard() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      try {
-        const params: FetchParams = {
-          page: state.page,
-          pageSize: state.pageSize,
-          search: state.search,
-          sortBy: state.sortBy,
-          sortOrder: state.sortOrder,
-          pass: state.pass,
-          year: state.year,
-          yearRange: state.yearRange,
-        };
-        const result = await fetchForms(params);
-        if (cancelled) return;
-        setData(result.responses);
-        setTotal(result.pagination.total);
-        setTotalPages(Math.max(result.pagination.totalPages, 1));
-        setRowSelection({});
-        setMatchAllIds(null);
-        setError(null);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof Error && err.message === "UNAUTHORIZED") {
-          router.replace("/signin");
-          return;
-        }
-        if (err instanceof Error && err.message.startsWith("RATE_LIMITED")) {
-          const seconds = err.message.split(":")[1];
-          setError(
-            seconds
-              ? `Rate limited. Please retry after ${seconds} seconds.`
-              : "Rate limited. Please retry later."
-          );
-          return;
-        }
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch data. Please try again."
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [state, router, reloadKey]);
 
   const columns = useMemo<ColumnDef<FormRow>[]>(() => {
     const selectCol: ColumnDef<FormRow> = {
@@ -229,100 +180,70 @@ export default function AdminDashboard() {
           aria-label={`Select ${row.original.name}`}
         />
       ),
-      enableSorting: false,
-      enableHiding: false,
       size: 40,
     };
 
-    const serialCol: ColumnDef<FormRow> = {
-      id: "serialNumber",
-      accessorFn: (row) => row.serialNumber ?? 0,
-      header: "Member ID",
-      cell: ({ row }) => <SerialCell serialNumber={row.original.serialNumber} />,
-      size: 90,
-    };
-
     const dataCols: ColumnDef<FormRow>[] = [
-      { id: "name", accessorKey: "name", header: "Name" },
-      { id: "address", accessorKey: "address", header: "Address" },
-      { id: "number", accessorKey: "number", header: "Phone" },
-      { id: "email", accessorKey: "email", header: "Email" },
-      { id: "aadhar", accessorKey: "aadhar", header: "Aadhar" },
-      { id: "pass", accessorKey: "pass", header: "Education" },
-      { id: "year", accessorKey: "year", header: "Year" },
+      {
+        id: "serialNumber",
+        accessorFn: (row) => row.serialNumber ?? 0,
+        header: "Member ID",
+        cell: ({ row }) => <SerialCell serialNumber={row.original.serialNumber} />,
+        size: 90,
+      },
+      { id: "name", accessorFn: (row) => row.name, header: "Name" },
+      { id: "address", accessorFn: (row) => row.address, header: "Address" },
+      { id: "number", accessorFn: (row) => String(row.number), header: "Phone" },
+      { id: "email", accessorFn: (row) => row.email ?? "", header: "Email" },
+      { id: "aadhar", accessorFn: (row) => row.aadhar ?? "", header: "Aadhar" },
+      { id: "pass", accessorFn: (row) => row.pass ?? "", header: "Education" },
+      { id: "year", accessorFn: (row) => row.year ?? "", header: "Year" },
     ];
 
-    return [selectCol, serialCol, ...dataCols];
+    return [selectCol, ...dataCols];
   }, []);
 
   const table = useReactTable({
-    data,
+    data: rows,
     columns,
-    state: { rowSelection },
+    state: { globalFilter, columnFilters, sorting, pagination, rowSelection },
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
+    globalFilterFn: "auto",
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getRowId: (row) => row._id ?? String(row.number),
   });
 
-  const selectedIds = useMemo(() => {
-    if (matchAllIds) {
-      return Array.from(matchAllIds);
-    }
-    return Object.keys(rowSelection)
-      .map((key) => data.find((row) => (row._id ?? String(row.number)) === key)?._id)
-      .filter((id): id is string => Boolean(id));
-  }, [rowSelection, data, matchAllIds]);
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const pageCount = Math.max(table.getPageCount(), 1);
+  const currentPage = table.getState().pagination.pageIndex + 1;
 
-  const selectedCount = matchAllIds
-    ? matchAllIds.size
-    : Object.keys(rowSelection).length;
+  const selectedIds = useMemo(
+    () =>
+      Object.keys(rowSelection)
+        .map((key) => rows.find((row) => (row._id ?? String(row.number)) === key)?._id)
+        .filter((id): id is string => Boolean(id)),
+    [rowSelection, rows]
+  );
 
-  const handleSelectAllMatching = async () => {
-    if (matchAllIds) {
-      setMatchAllIds(null);
-      setRowSelection({});
-      return;
-    }
+  const selectedCount = Object.keys(rowSelection).length;
 
-    setFetchingMatchIds(true);
+  const handleSync = async () => {
+    setSyncing(true);
     try {
-      const query = new URLSearchParams();
-      if (state.search) query.set("search", state.search);
-      for (const p of state.pass) query.append("pass", p);
-      for (const y of state.year) query.append("year", y);
-      if (state.yearRange) query.set("yearRange", state.yearRange);
-
-      const response = await fetch(`/api/fetch/ids?${query.toString()}`);
-      if (response.status === 401) {
-        router.replace("/signin");
-        return;
-      }
-      if (!response.ok) {
-        throw new Error("Could not fetch matching ids");
-      }
-      const result = await response.json();
-      setMatchAllIds(new Set(result.ids as string[]));
-      toast.success(`Selected all ${result.ids.length} matching members`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not select all matching members");
+      await sync();
+      toast.success("Data synced with server");
+    } catch {
+      toast.error("Sync failed. Please try again.");
     } finally {
-      setFetchingMatchIds(false);
+      setSyncing(false);
     }
-  };
-
-  /** Cycle: none → desc → asc → none. Server-side sort via URL state. */
-  const handleSortToggle = (columnId: string) => {
-    if (state.sortBy !== columnId) {
-      update({ sortBy: columnId, sortOrder: "desc" }, { resetPage: true });
-    } else if (state.sortOrder === "desc") {
-      update({ sortOrder: "asc" }, { resetPage: true });
-    } else {
-      update({ sortBy: "serialNumber", sortOrder: "desc" }, { resetPage: true });
-    }
-  };
-
-  const handleQuickSort = (order: "desc" | "asc") => {
-    update({ sortBy: "serialNumber", sortOrder: order }, { resetPage: true });
   };
 
   const handleExport = async (scope: "all" | "filtered" | "selected", ids?: string[]) => {
@@ -330,10 +251,11 @@ export default function AdminDashboard() {
     try {
       const query = new URLSearchParams({ format: exportFormat, scope });
       if (scope === "filtered") {
-        if (state.search) query.set("search", state.search);
-        for (const p of state.pass) query.append("pass", p);
-        for (const y of state.year) query.append("year", y);
-        if (state.yearRange) query.set("yearRange", state.yearRange);
+        const filtered = table.getFilteredRowModel().rows.map((r) => r.original._id);
+        for (const id of filtered.filter((i): i is string => Boolean(i))) {
+          query.append("id", id);
+        }
+        query.set("scope", "selected");
       }
       if (scope === "selected" && ids) {
         for (const id of ids) query.append("id", id);
@@ -357,7 +279,9 @@ export default function AdminDashboard() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(objectUrl);
-      toast.success(`Exported ${scope === "selected" ? "selected members" : scope === "all" ? "all members" : "filtered view"}`);
+      toast.success(
+        `Exported ${scope === "selected" ? "selected members" : scope === "all" ? "all members" : "filtered view"}`
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -383,13 +307,13 @@ export default function AdminDashboard() {
           throw new Error(result.message || "Could not delete members");
         }
         deletedTotal += result.deletedCount ?? chunk.length;
+        for (const id of chunk) {
+          removeRow(id);
+        }
       }
       toast.success(`Deleted ${deletedTotal} members`);
       setBulkDeleteOpen(false);
-      setMatchAllIds(null);
       setRowSelection({});
-      update({}, { resetPage: true });
-      window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not delete members");
     } finally {
@@ -397,17 +321,21 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSavedMember = (updated: FormRow) => {
-    setData((prev) => prev.map((row) => (row._id === updated._id ? updated : row)));
-  };
+  const handleSavedMember = useCallback(
+    (updated: FormRow) => {
+      updateRow(updated);
+    },
+    [updateRow]
+  );
 
-  const handleDeletedMember = () => {
-    setData((prev) => prev.filter((row) => row._id !== deleteMember?._id));
-    setTotal((prev) => Math.max(prev - 1, 0));
-  };
+  const handleDeletedMember = useCallback(
+    (id: string) => {
+      removeRow(id);
+    },
+    [removeRow]
+  );
 
   const visibleRows = table.getRowModel().rows;
-  const newestFirst = state.sortBy === "serialNumber" && state.sortOrder === "desc";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100">
@@ -422,41 +350,42 @@ export default function AdminDashboard() {
               <p className="text-xs text-slate-500">NV Past Students Association</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              fetch("/api/sign-out", { method: "POST" }).finally(() => {
-                router.replace("/signin");
-                router.refresh();
-              });
-            }}
-          >
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-slate-400 sm:inline">
+              {fromCache ? "Cached" : "Live"} · Updated {formatRelative(updatedAt)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncing || !isOnline}
+              title="Sync with server"
+            >
+              {syncing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              Sync
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetch("/api/sign-out", { method: "POST" }).finally(() => {
+                  router.replace("/signin");
+                  router.refresh();
+                });
+              }}
+            >
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StatCards />
-
-        {error && (
-          <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm font-medium text-red-700">{error}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => {
-                setError(null);
-                setReloadKey((k) => k + 1);
-              }}
-            >
-              <RotateCcw className="size-3.5" />
-              Retry
-            </Button>
-          </div>
-        )}
 
         <div className="mt-6 rounded-2xl border border-slate-200/70 bg-white/85 shadow-xl shadow-indigo-100/40 backdrop-blur">
           <div className="flex flex-col gap-3 border-b border-slate-200/70 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -465,18 +394,20 @@ export default function AdminDashboard() {
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <Input
                   ref={searchInputRef}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  value={globalFilter}
+                  onChange={(e) => {
+                    setGlobalFilter(e.target.value);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
                   placeholder="Search name, phone, email, or #ID... (⌘K)"
                   className="pl-8 pr-16"
                   aria-label="Search members"
                 />
                 <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  {isPending && <Loader2 className="size-3.5 animate-spin text-indigo-500" />}
-                  {searchInput ? (
+                  {globalFilter ? (
                     <button
                       type="button"
-                      onClick={() => setSearchInput("")}
+                      onClick={() => setGlobalFilter("")}
                       className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                       aria-label="Clear search"
                     >
@@ -492,21 +423,29 @@ export default function AdminDashboard() {
 
               <div className="flex rounded-lg border border-input">
                 <Button
-                  variant={newestFirst ? "secondary" : "ghost"}
+                  variant={
+                    sorting[0]?.id === "serialNumber" && sorting[0]?.desc
+                      ? "secondary"
+                      : "ghost"
+                  }
                   size="sm"
                   className="rounded-none rounded-l-lg"
-                  onClick={() => handleQuickSort("desc")}
-                  title="Newest first (#563 → #1)"
+                  onClick={() => setSorting([{ id: "serialNumber", desc: true }])}
+                  title="Newest first (#564 → #1)"
                 >
                   <ArrowDownNarrowWide className="size-4" />
                   Newest
                 </Button>
                 <Button
-                  variant={!newestFirst && state.sortBy === "serialNumber" ? "secondary" : "ghost"}
+                  variant={
+                    sorting[0]?.id === "serialNumber" && !sorting[0]?.desc
+                      ? "secondary"
+                      : "ghost"
+                  }
                   size="sm"
                   className="rounded-none rounded-r-lg"
-                  onClick={() => handleQuickSort("asc")}
-                  title="Oldest first (#1 → #563)"
+                  onClick={() => setSorting([{ id: "serialNumber", desc: false }])}
+                  title="Oldest first (#1 → #564)"
                 >
                   <ArrowUpNarrowWide className="size-4" />
                   Oldest
@@ -521,9 +460,9 @@ export default function AdminDashboard() {
                     <Button variant="outline" size="sm">
                       <Filter className="size-4" />
                       Graduation Year
-                      {state.year.length > 0 && (
+                      {yearFilter.length > 0 && (
                         <Badge variant="secondary" className="ml-1">
-                          {state.year.length}
+                          {yearFilter.length}
                         </Badge>
                       )}
                     </Button>
@@ -535,7 +474,7 @@ export default function AdminDashboard() {
                   </PopoverHeader>
                   <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                     {YEARS.map((year) => {
-                      const selected = state.year.includes(String(year));
+                      const selected = yearFilter.includes(String(year));
                       return (
                         <label
                           key={year}
@@ -545,9 +484,17 @@ export default function AdminDashboard() {
                             checked={selected}
                             onCheckedChange={(checked) => {
                               const next = checked
-                                ? [...state.year, String(year)]
-                                : state.year.filter((y) => y !== String(year));
-                              update({ year: next }, { resetPage: true });
+                                ? [...yearFilter, String(year)]
+                                : yearFilter.filter((y) => y !== String(year));
+                              setColumnFilters((prev) =>
+                                next.length > 0
+                                  ? [
+                                      ...prev.filter((f) => f.id !== "year"),
+                                      { id: "year", value: next },
+                                    ]
+                                  : prev.filter((f) => f.id !== "year")
+                              );
+                              setPagination((p) => ({ ...p, pageIndex: 0 }));
                             }}
                           />
                           {year}
@@ -564,9 +511,9 @@ export default function AdminDashboard() {
                     <Button variant="outline" size="sm">
                       <SlidersHorizontal className="size-4" />
                       Pass / Branch
-                      {state.pass.length > 0 && (
+                      {passFilter.length > 0 && (
                         <Badge variant="secondary" className="ml-1">
-                          {state.pass.length}
+                          {passFilter.length}
                         </Badge>
                       )}
                     </Button>
@@ -578,7 +525,7 @@ export default function AdminDashboard() {
                   </PopoverHeader>
                   <div className="space-y-1">
                     {PASS_VALUES.map((value) => {
-                      const selected = state.pass.includes(value);
+                      const selected = passFilter.includes(value);
                       return (
                         <label
                           key={value}
@@ -588,9 +535,17 @@ export default function AdminDashboard() {
                             checked={selected}
                             onCheckedChange={(checked) => {
                               const next = checked
-                                ? [...state.pass, value]
-                                : state.pass.filter((p) => p !== value);
-                              update({ pass: next }, { resetPage: true });
+                                ? [...passFilter, value]
+                                : passFilter.filter((p) => p !== value);
+                              setColumnFilters((prev) =>
+                                next.length > 0
+                                  ? [
+                                      ...prev.filter((f) => f.id !== "pass"),
+                                      { id: "pass", value: next },
+                                    ]
+                                  : prev.filter((f) => f.id !== "pass")
+                              );
+                              setPagination((p) => ({ ...p, pageIndex: 0 }));
                             }}
                           />
                           {value}
@@ -601,38 +556,15 @@ export default function AdminDashboard() {
                 </PopoverContent>
               </Popover>
 
-              <Select
-                value={String(state.pageSize)}
-                onValueChange={(value) => {
-                  if (value) update({ pageSize: Number(value) }, { resetPage: true });
-                }}
-              >
-                <SelectTrigger className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size} / page
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
+              <select
                 value={exportFormat}
-                onValueChange={(value) => {
-                  if (value) setExportFormat(value);
-                }}
+                onChange={(e) => setExportFormat(e.target.value)}
+                className="rounded-lg border border-input bg-white px-2 py-1.5 text-sm"
+                aria-label="Export format"
               >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="csv">CSV</SelectItem>
-                  <SelectItem value="xlsx">Excel</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="csv">CSV</option>
+                <option value="xlsx">Excel</option>
+              </select>
 
               <Button
                 size="sm"
@@ -659,12 +591,12 @@ export default function AdminDashboard() {
           {hasActiveFilters && (
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/70 px-4 py-2">
               <span className="text-xs font-medium text-slate-500">Active filters:</span>
-              {state.search && (
+              {globalFilter && (
                 <Badge variant="secondary">
-                  Search: {state.search}
+                  Search: {globalFilter}
                   <button
                     type="button"
-                    onClick={() => update({ search: "" }, { resetPage: true })}
+                    onClick={() => setGlobalFilter("")}
                     className="ml-1 hover:text-slate-900"
                     aria-label="Clear search filter"
                   >
@@ -672,14 +604,22 @@ export default function AdminDashboard() {
                   </button>
                 </Badge>
               )}
-              {state.pass.map((p) => (
+              {passFilter.map((p) => (
                 <Badge key={p} variant="secondary">
                   {p}
                   <button
                     type="button"
-                    onClick={() =>
-                      update({ pass: state.pass.filter((x) => x !== p) }, { resetPage: true })
-                    }
+                    onClick={() => {
+                      const next = passFilter.filter((x) => x !== p);
+                      setColumnFilters((prev) =>
+                        next.length > 0
+                          ? [
+                              ...prev.filter((f) => f.id !== "pass"),
+                              { id: "pass", value: next },
+                            ]
+                          : prev.filter((f) => f.id !== "pass")
+                      );
+                    }}
                     className="ml-1 hover:text-slate-900"
                     aria-label={`Remove ${p} filter`}
                   >
@@ -687,14 +627,22 @@ export default function AdminDashboard() {
                   </button>
                 </Badge>
               ))}
-              {state.year.map((y) => (
+              {yearFilter.map((y) => (
                 <Badge key={y} variant="secondary">
                   {y}
                   <button
                     type="button"
-                    onClick={() =>
-                      update({ year: state.year.filter((x) => x !== y) }, { resetPage: true })
-                    }
+                    onClick={() => {
+                      const next = yearFilter.filter((x) => x !== y);
+                      setColumnFilters((prev) =>
+                        next.length > 0
+                          ? [
+                              ...prev.filter((f) => f.id !== "year"),
+                              { id: "year", value: next },
+                            ]
+                          : prev.filter((f) => f.id !== "year")
+                      );
+                    }}
                     className="ml-1 hover:text-slate-900"
                     aria-label={`Remove ${y} filter`}
                   >
@@ -715,9 +663,8 @@ export default function AdminDashboard() {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
-                      const columnId = header.column.id;
-                      const sortable = SORTABLE_COLUMNS.some((c) => c.id === columnId);
-                      const isActive = state.sortBy === columnId;
+                      const sortable = SORTABLE_COLUMNS.some((c) => c.id === header.column.id);
+                      const sortState = header.column.getIsSorted();
                       return (
                         <TableHead
                           key={header.id}
@@ -727,14 +674,14 @@ export default function AdminDashboard() {
                           {sortable ? (
                             <button
                               type="button"
-                              onClick={() => handleSortToggle(columnId)}
+                              onClick={() => header.column.toggleSorting()}
                               className="inline-flex items-center gap-1 hover:text-indigo-700"
                               aria-label={`Sort by ${header.column.columnDef.header}`}
                             >
                               {flexRender(header.column.columnDef.header, header.getContext())}
-                              {isActive && state.sortOrder === "desc" ? (
+                              {sortState === "desc" ? (
                                 <span className="text-indigo-600">↓</span>
-                              ) : isActive && state.sortOrder === "asc" ? (
+                              ) : sortState === "asc" ? (
                                 <span className="text-indigo-600">↑</span>
                               ) : (
                                 <ChevronsUpDown className="size-3.5 text-slate-300" />
@@ -755,9 +702,6 @@ export default function AdminDashboard() {
                     <TableRow key={`skeleton-${i}`}>
                       <TableCell>
                         <Skeleton className="h-4 w-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-6" />
                       </TableCell>
                       {SORTABLE_COLUMNS.map((col) => (
                         <TableCell key={col.id}>
@@ -810,16 +754,20 @@ export default function AdminDashboard() {
 
           <div className="flex flex-col gap-3 border-t border-slate-200/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-600">
-              Page <span className="font-semibold text-slate-900">{state.page}</span> of{" "}
-              <span className="font-semibold text-slate-900">{totalPages}</span>
-              <span className="text-slate-400"> · {total} records</span>
+              Page <span className="font-semibold text-slate-900">{currentPage}</span> of{" "}
+              <span className="font-semibold text-slate-900">{pageCount}</span>
+              <span className="text-slate-400">
+                {" "}
+                · {filteredCount} records
+                {rows.length > 0 && ` (${rows.length} total)`}
+              </span>
             </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => update({ page: state.page - 1 })}
-                disabled={state.page <= 1 || loading}
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage() || loading}
               >
                 <ChevronLeft className="size-4" />
                 Previous
@@ -827,8 +775,8 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => update({ page: state.page + 1 })}
-                disabled={state.page >= totalPages || loading}
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage() || loading}
               >
                 Next
                 <ChevronRight className="size-4" />
@@ -839,7 +787,7 @@ export default function AdminDashboard() {
       </main>
 
       <AnimatePresence>
-        {Object.keys(rowSelection).length > 0 && (
+        {selectedCount > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -849,26 +797,6 @@ export default function AdminDashboard() {
           >
             <div className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl">
               <span className="text-sm font-medium">{selectedCount} selected</span>
-              {matchAllIds ? (
-                <span className="rounded-full bg-indigo-500/30 px-2 py-0.5 text-xs text-indigo-200">
-                  All matching results
-                </span>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-slate-300 hover:bg-white/10"
-                  onClick={handleSelectAllMatching}
-                  disabled={fetchingMatchIds || total === 0}
-                >
-                  {fetchingMatchIds ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  Select all {total}
-                </Button>
-              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -893,10 +821,7 @@ export default function AdminDashboard() {
                 size="sm"
                 variant="ghost"
                 className="text-slate-300 hover:bg-white/10"
-                onClick={() => {
-                  setRowSelection({});
-                  setMatchAllIds(null);
-                }}
+                onClick={() => setRowSelection({})}
               >
                 <X className="size-4" />
                 Clear
@@ -931,7 +856,7 @@ export default function AdminDashboard() {
         member={deleteMember}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        onDeleted={handleDeletedMember}
+        onDeleted={(id) => handleDeletedMember(id)}
       />
 
       {bulkDeleteOpen && (

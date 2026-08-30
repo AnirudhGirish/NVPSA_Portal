@@ -66,6 +66,10 @@ export async function GET(req: Request) {
   const yearRangeRaw = searchParams.get("yearRange") ?? "";
   const yearRange = /^\d{4}-\d{4}$/.test(yearRangeRaw) ? yearRangeRaw : undefined;
 
+  // Cached mode: the dashboard requests the complete dataset once and then
+  // performs search/filter/sort/pagination fully client-side.
+  const allMode = searchParams.get("all") === "true";
+
   try {
     const filter: FilterQuery<typeof Form> = buildFormFilter({ pass, year, yearRange });
 
@@ -99,26 +103,30 @@ export async function GET(req: Request) {
     }
 
     const [responses, total] = await Promise.all([
-      isNumeric && numVal !== null
-        ? Form.aggregate([
-            { $match: filter },
-            {
-              $addFields: {
-                _exactSerialMatch: {
-                  $cond: [{ $eq: ["$serialNumber", numVal] }, 0, 1],
+      allMode
+        ? Form.find(filter)
+            .sort({ serialNumber: -1, _id: 1 })
+            .lean()
+        : isNumeric && numVal !== null
+          ? Form.aggregate([
+              { $match: filter },
+              {
+                $addFields: {
+                  _exactSerialMatch: {
+                    $cond: [{ $eq: ["$serialNumber", numVal] }, 0, 1],
+                  },
                 },
               },
-            },
-            { $sort: { _exactSerialMatch: 1, [sortField]: sortOrder, _id: 1 } },
-            { $skip: (page - 1) * pageSize },
-            { $limit: pageSize },
-            { $unset: "_exactSerialMatch" },
-          ])
-        : Form.find(filter)
-            .sort({ [sortField]: sortOrder, _id: 1 })
-            .skip((page - 1) * pageSize)
-            .limit(pageSize)
-            .lean(),
+              { $sort: { _exactSerialMatch: 1, [sortField]: sortOrder, _id: 1 } },
+              { $skip: (page - 1) * pageSize },
+              { $limit: pageSize },
+              { $unset: "_exactSerialMatch" },
+            ])
+          : Form.find(filter)
+              .sort({ [sortField]: sortOrder, _id: 1 })
+              .skip((page - 1) * pageSize)
+              .limit(pageSize)
+              .lean(),
       Form.countDocuments(filter),
     ]);
 
@@ -127,7 +135,12 @@ export async function GET(req: Request) {
         success: true,
         message: "Data Fetching Successfull!!",
         responses,
-        pagination: { page, pageSize, total, totalPages: Math.max(Math.ceil(total / pageSize), 1) },
+        pagination: {
+          page: allMode ? 1 : page,
+          pageSize: allMode ? Math.max(total, 1) : pageSize,
+          total,
+          totalPages: allMode ? 1 : Math.max(Math.ceil(total / pageSize), 1),
+        },
       },
       { status: 200 }
     );
