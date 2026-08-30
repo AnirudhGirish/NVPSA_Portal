@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { adminSchema, type AdminInput } from "@/schemas/admin.schema";
@@ -53,7 +53,7 @@ export default function AdminSignup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-grid p-6">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -63,19 +63,19 @@ export default function AdminSignup() {
         <div className="mb-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-navy"
           >
             <ArrowLeft className="size-4" />
-            Back to Home
+            Return to Main Portal
           </Link>
         </div>
-        <Card className="border-slate-200/80 bg-white/85 shadow-xl shadow-indigo-100/50 backdrop-blur">
+        <Card className="border-slate-200/80 bg-white/90 shadow-institutional-lg backdrop-blur">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-indigo-600/10">
-              <UserPlus className="size-6 text-indigo-600" />
+            <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-xl bg-navy ring-2 ring-heritage/30">
+              <ShieldCheck className="size-7 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-slate-900">Admin Sign Up</CardTitle>
-            <CardDescription>Create an administrator account</CardDescription>
+            <CardTitle className="text-2xl font-bold text-navy">Administrator Registration</CardTitle>
+            <CardDescription>Create an association coordinator account</CardDescription>
           </CardHeader>
           <CardContent>
             {errorMessage && (
@@ -127,7 +127,7 @@ export default function AdminSignup() {
                 )}
               </div>
 
-              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" size="lg" className="w-full bg-navy text-white hover:bg-navy-light" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="animate-spin" />

@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, GraduationCap, Loader2, Phone, XCircle } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle2, Loader2, Phone, ShieldCheck, XCircle } from "lucide-react";
 import { formSchema, type FormInput } from "@/schemas/form.schema";
 import { checkPhoneExists } from "@/lib/fetch";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PublicLayout } from "@/components/site/public-layout";
 
 const SECTION_VARIANTS = {
   hidden: { opacity: 0, y: 12 },
@@ -123,29 +123,8 @@ export default function FormPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100">
-      <nav className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-600/10">
-              <GraduationCap className="size-5 text-indigo-600" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-slate-900">NVPSA</p>
-              <p className="text-[11px] text-slate-500">Past Students Association</p>
-            </div>
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
-          >
-            <ArrowLeft className="size-4" />
-            Back to Home
-          </Link>
-        </div>
-      </nav>
-
-      <div className="p-4 sm:p-6 lg:p-10">
+    <PublicLayout>
+      <div className="bg-grid p-4 sm:p-6 lg:p-10">
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -153,8 +132,9 @@ export default function FormPage() {
         className="mx-auto max-w-2xl"
       >
         <div className="mb-6 text-center">
-          <Badge variant="outline" className="mb-3 border-indigo-200 bg-white/60 text-indigo-700 backdrop-blur">
-            NV Society · Kalaburgi
+          <Badge variant="outline" className="mb-3 border-heritage/20 bg-heritage/5 text-heritage-dark backdrop-blur">
+            <ShieldCheck className="size-3.5 mr-1" />
+            N.V. Society · Kalaburagi
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
             Past Students Association
@@ -185,8 +165,9 @@ export default function FormPage() {
                 animate="show"
                 className="space-y-4"
               >
-                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-indigo-700">
-                  Personal Information
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-navy">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-navy text-xs font-bold text-white tabular-nums">1</span>
+                  Personal Details
                 </h3>
                 <div className="space-y-1.5">
                   <Label htmlFor="name">
@@ -240,8 +221,9 @@ export default function FormPage() {
                 animate="show"
                 className="space-y-4"
               >
-                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-indigo-700">
-                  Academic Background
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-navy">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-navy text-xs font-bold text-white tabular-nums">2</span>
+                  Academic Record
                 </h3>
                 <div className="space-y-1.5">
                   <Label htmlFor="pass">Last Attended Program At NV</Label>
@@ -286,8 +268,9 @@ export default function FormPage() {
                 animate="show"
                 className="space-y-4"
               >
-                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-indigo-700">
-                  Contact Details
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-navy">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-navy text-xs font-bold text-white tabular-nums">3</span>
+                  Contact Information
                 </h3>
                 <div className="space-y-1.5">
                   <Label htmlFor="number">
@@ -364,6 +347,6 @@ export default function FormPage() {
         </Card>
       </motion.div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

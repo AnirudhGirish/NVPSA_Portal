@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { PublicLayout } from "@/components/site/public-layout";
 
 interface SubmissionSummary {
   reference: string;
@@ -54,7 +55,8 @@ export default function SuccessPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50 via-slate-50 to-slate-100 p-4 sm:p-6">
+    <PublicLayout>
+    <div className="min-h-screen flex items-center justify-center bg-grid p-4 sm:p-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -154,5 +156,6 @@ export default function SuccessPage() {
         </Card>
       </motion.div>
     </div>
+    </PublicLayout>
   );
 }
