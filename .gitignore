@@ -1,6 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
 /node_modules
 /.pnp
 .pnp.*
@@ -10,36 +10,59 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ---------------------------------------------------------------------------
+# Next.js build output
+# ---------------------------------------------------------------------------
 /.next/
 /out/
 
-# production
+# production build directory
 /build
 
-# misc
+# ---------------------------------------------------------------------------
+# TypeScript
+# ---------------------------------------------------------------------------
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------------------------------------------------------------------------
+# Environment & secrets (never commit real credentials)
+# ---------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ---------------------------------------------------------------------------
+# Local developer tooling & AI assistant artifacts
+# ---------------------------------------------------------------------------
+.commandcode/
+.mcp.json
+.mcp/
+.cursor/
+.vscode/*
+!.vscode/extensions.json
+
+# ---------------------------------------------------------------------------
+# Testing & coverage
+# ---------------------------------------------------------------------------
+/coverage
+.nyc_output
+
+# ---------------------------------------------------------------------------
+# Misc
+# ---------------------------------------------------------------------------
 .DS_Store
 *.pem
-
-# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
+# ---------------------------------------------------------------------------
+# Deployment platform caches
+# ---------------------------------------------------------------------------
 .vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.mcp.json/*
-
-.commandcode/*
+.netlify
