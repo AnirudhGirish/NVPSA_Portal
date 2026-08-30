@@ -100,9 +100,24 @@ export interface SanitizedFormRow {
   aadhar: string;
   pass: string;
   year: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export function sanitizeFormRow(row: Record<string, unknown>): SanitizedFormRow {
+  const fmtDate = (val: unknown): string => {
+    if (!val) return "";
+    const d = new Date(String(val));
+    if (Number.isNaN(d.getTime())) return sanitizeCsvCell(val) as string;
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return {
     serialNumber: Number(row.serialNumber),
     name: sanitizeCsvCell(row.name) as string,
@@ -112,5 +127,7 @@ export function sanitizeFormRow(row: Record<string, unknown>): SanitizedFormRow 
     aadhar: sanitizeCsvCell(row.aadhar) as string,
     pass: sanitizeCsvCell(row.pass) as string,
     year: sanitizeCsvCell(row.year) as string,
+    createdAt: fmtDate(row.createdAt),
+    updatedAt: fmtDate(row.updatedAt),
   };
 }

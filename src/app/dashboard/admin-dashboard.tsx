@@ -78,11 +78,20 @@ const SORTABLE_COLUMNS: { id: string; label: string }[] = [
 
 function SerialCell({ serialNumber }: { serialNumber?: number }) {
   return (
-    <span className="font-semibold text-navy tabular-nums">
+    <span className="font-mono font-semibold tabular-nums text-navy">
       #{serialNumber ?? "—"}
     </span>
   );
 }
+
+const VISIBLE_DATA_COLUMNS = [
+  "serialNumber",
+  "name",
+  "number",
+  "email",
+  "pass",
+  "year",
+] as const;
 
 function formatRelative(date: Date | null): string {
   if (!date) return "—";
@@ -190,15 +199,69 @@ export default function AdminDashboard() {
         accessorFn: (row) => row.serialNumber ?? 0,
         header: "Member ID",
         cell: ({ row }) => <SerialCell serialNumber={row.original.serialNumber} />,
-        size: 90,
+        size: 112,
       },
-      { id: "name", accessorFn: (row) => row.name, header: "Name" },
-      { id: "address", accessorFn: (row) => row.address, header: "Address" },
-      { id: "number", accessorFn: (row) => String(row.number), header: "Phone" },
-      { id: "email", accessorFn: (row) => row.email ?? "", header: "Email" },
-      { id: "aadhar", accessorFn: (row) => row.aadhar ?? "", header: "Aadhar" },
-      { id: "pass", accessorFn: (row) => row.pass ?? "", header: "Education" },
-      { id: "year", accessorFn: (row) => row.year ?? "", header: "Year" },
+      {
+        id: "name",
+        accessorFn: (row) => row.name,
+        header: "Name",
+        cell: ({ row }) => (
+          <span className="font-medium text-slate-900 transition-colors group-hover/name:text-navy">
+            {row.original.name}
+          </span>
+        ),
+        size: 200,
+      },
+      {
+        id: "number",
+        accessorFn: (row) => String(row.number),
+        header: "Phone",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-slate-700">
+            {row.original.number}
+          </span>
+        ),
+        size: 144,
+      },
+      {
+        id: "email",
+        accessorFn: (row) => row.email ?? "",
+        header: "Email",
+        cell: ({ row }) => (
+          <span
+            className="block max-w-[200px] truncate text-slate-600"
+            title={row.original.email || undefined}
+          >
+            {row.original.email || "—"}
+          </span>
+        ),
+        size: 224,
+      },
+      {
+        id: "pass",
+        accessorFn: (row) => row.pass ?? "",
+        header: "Education",
+        cell: ({ row }) =>
+          row.original.pass ? (
+            <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {row.original.pass}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+        size: 112,
+      },
+      {
+        id: "year",
+        accessorFn: (row) => row.year ?? "",
+        header: "Year",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-slate-700">
+            {row.original.year || "—"}
+          </span>
+        ),
+        size: 96,
+      },
     ];
 
     // Hidden column that ranks exact Member ID matches first when the
@@ -723,11 +786,11 @@ export default function AdminDashboard() {
                 {loading ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
-                      <TableCell>
+                      <TableCell className="w-12 text-center">
                         <Skeleton className="h-4 w-4" />
                       </TableCell>
-                      {SORTABLE_COLUMNS.map((col) => (
-                        <TableCell key={col.id}>
+                      {VISIBLE_DATA_COLUMNS.map((colId) => (
+                        <TableCell key={colId}>
                           <Skeleton className="h-4 w-full max-w-36" />
                         </TableCell>
                       ))}
@@ -741,7 +804,7 @@ export default function AdminDashboard() {
                         setDetailMember(row.original);
                         setDetailOpen(true);
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer transition-colors hover:bg-slate-50/80"
                     >
                       {row
                         .getVisibleCells()
@@ -755,7 +818,7 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="h-48 text-center">
+                    <TableCell colSpan={VISIBLE_DATA_COLUMNS.length + 1} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
                           <Search className="size-5 text-slate-400" />

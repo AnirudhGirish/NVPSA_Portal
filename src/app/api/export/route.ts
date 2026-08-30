@@ -11,10 +11,12 @@ const EXCEL_COLUMNS: Partial<ExcelJS.Column>[] = [
   { header: "Name", key: "name", width: 24 },
   { header: "Phone", key: "number", width: 16 },
   { header: "Email", key: "email", width: 28 },
-  { header: "Address", key: "address", width: 36 },
-  { header: "Aadhar", key: "aadhar", width: 18 },
   { header: "Education", key: "pass", width: 14 },
   { header: "Year", key: "year", width: 10 },
+  { header: "Address", key: "address", width: 36 },
+  { header: "Aadhar", key: "aadhar", width: 18 },
+  { header: "Registered At", key: "createdAt", width: 22 },
+  { header: "Last Updated", key: "updatedAt", width: 22 },
 ];
 
 export async function GET(req: Request) {

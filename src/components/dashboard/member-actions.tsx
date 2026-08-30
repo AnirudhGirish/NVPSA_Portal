@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, Clock, Mail, MapPin, Phone, User } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Edit3,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { FormRow } from "@/lib/fetch";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -42,6 +48,28 @@ function formatDate(value?: string): string {
   });
 }
 
+function DetailRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: typeof Phone;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          {label}
+        </p>
+        <div className="mt-0.5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function MemberDetailSheet({
   member,
   open,
@@ -57,108 +85,109 @@ export function MemberDetailSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-md overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-full gap-0 overflow-hidden border-l border-slate-200 bg-white p-0 shadow-2xl sm:max-w-lg"
+      >
         {member && (
           <>
-            <SheetHeader>
-              <div className="flex size-12 items-center justify-center rounded-xl bg-navy/5">
-                <User className="size-6 text-navy" />
-              </div>
-              <SheetTitle className="text-xl font-bold text-navy">
-                {member.name}
-              </SheetTitle>
-              <SheetDescription>
-                {member.serialNumber
-                  ? `Member #${member.serialNumber}`
-                  : "Member profile"}
-              </SheetDescription>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {member.pass && <Badge variant="secondary">{member.pass}</Badge>}
-                {member.year && <Badge variant="outline">Batch {member.year}</Badge>}
-              </div>
-            </SheetHeader>
-
-            <div className="mt-6 space-y-4">
-              <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-3">
-                    <Phone className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Phone</p>
-                      <p className="font-medium text-slate-900">{member.number}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Mail className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Email</p>
-                      <p className="break-all font-medium text-slate-900">
-                        {member.email || "Not provided"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Address</p>
-                      <p className="font-medium text-slate-900">{member.address}</p>
-                    </div>
+            {/* ─── Fixed Header ─── */}
+            <div className="flex shrink-0 border-b border-slate-100 bg-white px-6 pb-5 pr-10 pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-navy/10 font-semibold text-lg text-navy ring-4 ring-navy/5">
+                  {member.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <SheetTitle className="text-xl font-bold leading-snug tracking-tight text-slate-900">
+                    {member.name}
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Member profile details
+                  </SheetDescription>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {member.serialNumber != null && (
+                      <span className="rounded-md bg-navy px-2.5 py-0.5 font-mono text-xs font-semibold text-white">
+                        #{member.serialNumber}
+                      </span>
+                    )}
+                    {member.pass && (
+                      <span className="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                        {member.pass}
+                      </span>
+                    )}
+                    {member.year && (
+                      <span className="rounded-md border border-heritage/20 bg-heritage/10 px-2.5 py-0.5 text-xs font-semibold text-heritage-dark">
+                        Batch {member.year}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-3">
-                    <CalendarDays className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Aadhar</p>
-                      <p className="font-mono font-medium text-slate-900">
-                        {member.aadhar || "Not provided"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Registered</p>
-                      <p className="font-medium text-slate-900">
-                        {formatDate(member.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Last Updated</p>
-                      <p className="font-medium text-slate-900">
-                        {formatDate(member.updatedAt)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* ─── Scrollable Body ─── */}
+            <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/40 px-6 py-5">
+              {/* Card 1: Contact & Address */}
+              <div className="space-y-3.5 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                <DetailRow icon={Phone} label="Phone">
+                  <p className="font-mono text-sm font-semibold text-slate-900 tabular-nums">
+                    {member.number}
+                  </p>
+                </DetailRow>
+                <DetailRow icon={Mail} label="Email">
+                  <p className="break-all text-sm font-medium text-slate-800">
+                    {member.email || "Not provided"}
+                  </p>
+                </DetailRow>
+                <DetailRow icon={MapPin} label="Address">
+                  <p className="break-words text-sm leading-relaxed text-slate-700">
+                    {member.address}
+                  </p>
+                </DetailRow>
               </div>
 
-              <Separator />
+              {/* Card 2: Identification & Timestamps */}
+              <div className="space-y-3.5 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                <DetailRow icon={ShieldCheck} label="Aadhar (UID)">
+                  <p className="font-mono text-sm text-slate-800">
+                    {member.aadhar || "Not provided"}
+                  </p>
+                </DetailRow>
+                <DetailRow icon={Calendar} label="Registered">
+                  <p className="font-mono text-sm text-slate-700">
+                    {formatDate(member.createdAt)}
+                  </p>
+                </DetailRow>
+                <DetailRow icon={Clock} label="Last Updated">
+                  <p className="font-mono text-sm text-slate-700">
+                    {formatDate(member.updatedAt)}
+                  </p>
+                </DetailRow>
+              </div>
+            </div>
 
-              <div className="flex gap-2">
+            {/* ─── Sticky Action Footer ─── */}
+            <div className="flex shrink-0 border-t border-slate-200/80 bg-white px-6 py-4">
+              <div className="grid w-full grid-cols-2 gap-3">
                 <Button
-                  className="flex-1 bg-navy text-white hover:bg-navy-light"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-navy py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-navy-light"
                   onClick={() => {
                     onOpenChange(false);
                     onEdit(member);
                   }}
                 >
+                  <Edit3 className="size-4" />
                   Edit Details
                 </Button>
                 <Button
-                  variant="destructive"
-                  className="flex-1"
+                  variant="outline"
+                  className="flex items-center justify-center gap-2 rounded-lg border-red-200 py-2.5 font-medium text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
                   onClick={() => {
                     onOpenChange(false);
                     onDelete(member);
                   }}
                 >
+                  <Trash2 className="size-4" />
                   Delete
                 </Button>
               </div>
@@ -209,8 +238,6 @@ export function EditMemberDialog({
     if (!member?._id) return;
     setErrorMessage(null);
 
-    // Optimistic: apply the change to the local cache immediately, then
-    // persist to the server in the background.
     const optimistic: FormRow = {
       ...member,
       name: data.name,
@@ -333,9 +360,7 @@ export function EditMemberDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
-              Save Changes
-            </Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -360,8 +385,6 @@ export function DeleteMemberDialog({
     if (!member?._id) return;
     setErrorMessage(null);
 
-    // Optimistic: remove from the local cache immediately, then delete on
-    // the server in the background.
     const memberId = member._id;
     onDeleted(memberId);
     onOpenChange(false);
