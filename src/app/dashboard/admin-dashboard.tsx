@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
-  Columns3,
   Delete,
   Download,
   Filter,
@@ -43,14 +42,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
@@ -91,8 +82,6 @@ const SORTABLE_COLUMNS: { id: string; label: string; sortField: string }[] = [
   { id: "year", label: "Year", sortField: "year" },
 ];
 
-const HIDEABLE_COLUMN_IDS = SORTABLE_COLUMNS.map((c) => c.id);
-
 function SerialCell({ serialNumber }: { serialNumber?: number }) {
   return (
     <span className="font-semibold text-indigo-600 tabular-nums">
@@ -115,15 +104,6 @@ export default function AdminDashboard() {
   const [searchInput, setSearchInput] = useState(state.search);
   const [debouncedSearch, setDebouncedSearch] = useState(state.search);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
-    name: true,
-    address: false,
-    number: true,
-    email: true,
-    aadhar: true,
-    pass: true,
-    year: true,
-  });
 
   const [exportFormat, setExportFormat] = useState("csv");
   const [exporting, setExporting] = useState(false);
@@ -278,25 +258,11 @@ export default function AdminDashboard() {
   const table = useReactTable({
     data,
     columns,
-    state: { rowSelection, columnVisibility },
+    state: { rowSelection },
     onRowSelectionChange: setRowSelection,
-    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row._id ?? String(row.number),
   });
-
-  /** Toggleable data columns only — select and id columns are excluded. */
-  const toggleableColumns = useMemo(
-    () =>
-      table
-        .getAllLeafColumns()
-        .filter(
-          (column) =>
-            HIDEABLE_COLUMN_IDS.includes(column.id) &&
-            column.getCanHide() !== false
-        ),
-    [table]
-  );
 
   const selectedIds = useMemo(() => {
     if (matchAllIds) {
@@ -501,7 +467,7 @@ export default function AdminDashboard() {
                   ref={searchInputRef}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search name, phone, #ID..."
+                  placeholder="Search name, phone, email, or #ID... (⌘K)"
                   className="pl-8 pr-16"
                   aria-label="Search members"
                 />
@@ -634,34 +600,6 @@ export default function AdminDashboard() {
                   </div>
                 </PopoverContent>
               </Popover>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button variant="outline" size="sm">
-                      <Columns3 className="size-4" />
-                      Columns
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {toggleableColumns.map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={Boolean(column.getIsVisible?.())}
-                      onCheckedChange={(checked) => {
-                        column.toggleVisibility?.(checked);
-                      }}
-                    >
-                      {SORTABLE_COLUMNS.find((c) => c.id === column.id)?.label ??
-                        column.columnDef.header?.toString() ??
-                        column.id}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
 
               <Select
                 value={String(state.pageSize)}

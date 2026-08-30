@@ -69,20 +69,17 @@ export async function GET(req: Request) {
   try {
     const filter: FilterQuery<typeof Form> = buildFormFilter({ pass, year, yearRange });
 
+    const isNumeric = /^\d+$/.test(search);
+    const numVal = isNumeric ? Number(search) : null;
+
     if (search) {
       const sanitized = escapeRegex(search);
-      const isNumeric = /^\d+$/.test(search);
-      const numVal = Number(search);
-
+      // Strictly 4 searchable fields: name, email, phone number, member ID.
       const orConditions: FilterQuery<typeof Form>[] = [
         { name: { $regex: sanitized, $options: "i" } },
         { email: { $regex: sanitized, $options: "i" } },
-        { pass: { $regex: sanitized, $options: "i" } },
-        { year: { $regex: sanitized, $options: "i" } },
-        { address: { $regex: sanitized, $options: "i" } },
-        { aadhar: { $regex: sanitized, $options: "i" } },
         // Phones are stored as Numbers; convert to string inside the query
-        // so partial phone searches (e.g. "980870") match.
+        // so partial phone searches (e.g. "9880") match.
         {
           $expr: {
             $regexMatch: {
@@ -93,8 +90,8 @@ export async function GET(req: Request) {
         } as FilterQuery<typeof Form>,
       ];
 
-      if (isNumeric) {
-        // Exact Member ID match (#42 → serialNumber: 42).
+      if (isNumeric && numVal !== null) {
+        // Exact Member ID match (#3 → serialNumber: 3).
         orConditions.push({ serialNumber: numVal });
       }
 
@@ -102,11 +99,26 @@ export async function GET(req: Request) {
     }
 
     const [responses, total] = await Promise.all([
-      Form.find(filter)
-        .sort({ [sortField]: sortOrder, _id: 1 })
-        .skip((page - 1) * pageSize)
-        .limit(pageSize)
-        .lean(),
+      isNumeric && numVal !== null
+        ? Form.aggregate([
+            { $match: filter },
+            {
+              $addFields: {
+                _exactSerialMatch: {
+                  $cond: [{ $eq: ["$serialNumber", numVal] }, 0, 1],
+                },
+              },
+            },
+            { $sort: { _exactSerialMatch: 1, [sortField]: sortOrder, _id: 1 } },
+            { $skip: (page - 1) * pageSize },
+            { $limit: pageSize },
+            { $unset: "_exactSerialMatch" },
+          ])
+        : Form.find(filter)
+            .sort({ [sortField]: sortOrder, _id: 1 })
+            .skip((page - 1) * pageSize)
+            .limit(pageSize)
+            .lean(),
       Form.countDocuments(filter),
     ]);
 
