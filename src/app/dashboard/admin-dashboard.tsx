@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowDownNarrowWide,
+  ArrowUpNarrowWide,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -22,10 +24,8 @@ import {
 import {
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { fetchForms, type FormRow, type FetchParams } from "@/lib/fetch";
@@ -77,20 +77,21 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const PASS_VALUES = ["SSLC", "PUC", "Degree", "Others"];
 const YEARS = Array.from({ length: 86 }, (_, i) => 1940 + i);
 
-const ALL_COLUMN_KEYS = ["name", "address", "number", "email", "aadhar", "pass", "year"] as const;
-type ColumnKey = (typeof ALL_COLUMN_KEYS)[number];
+/**
+ * Sortable data columns. Each has an explicit `id`, a display label, and the
+ * backend sort field (aliases like `phone` are mapped server-side).
+ */
+const SORTABLE_COLUMNS: { id: string; label: string; sortField: string }[] = [
+  { id: "serialNumber", label: "Member ID", sortField: "serialNumber" },
+  { id: "name", label: "Name", sortField: "name" },
+  { id: "number", label: "Phone", sortField: "phone" },
+  { id: "email", label: "Email", sortField: "email" },
+  { id: "address", label: "Address", sortField: "address" },
+  { id: "pass", label: "Education", sortField: "education" },
+  { id: "year", label: "Year", sortField: "year" },
+];
 
-const DEFAULT_HIDDEN: ColumnKey[] = ["aadhar", "address"];
-
-const COLUMN_LABELS: Record<ColumnKey, string> = {
-  name: "Name",
-  address: "Address",
-  number: "Phone",
-  email: "Email",
-  aadhar: "Aadhar",
-  pass: "Education",
-  year: "Year",
-};
+const HIDEABLE_COLUMN_IDS = SORTABLE_COLUMNS.map((c) => c.id);
 
 function SerialCell({ serialNumber }: { serialNumber?: number }) {
   return (
@@ -113,11 +114,16 @@ export default function AdminDashboard() {
   const [reloadKey, setReloadKey] = useState(0);
   const [searchInput, setSearchInput] = useState(state.search);
   const [debouncedSearch, setDebouncedSearch] = useState(state.search);
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(ALL_COLUMN_KEYS.map((k) => [k, !DEFAULT_HIDDEN.includes(k)]))
-  );
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    name: true,
+    address: false,
+    number: true,
+    email: true,
+    aadhar: true,
+    pass: true,
+    year: true,
+  });
 
   const [exportFormat, setExportFormat] = useState("csv");
   const [exporting, setExporting] = useState(false);
@@ -225,16 +231,6 @@ export default function AdminDashboard() {
   }, [state, router, reloadKey]);
 
   const columns = useMemo<ColumnDef<FormRow>[]>(() => {
-    const base: ColumnDef<FormRow>[] = [
-      { accessorKey: "name", header: "Name" },
-      { accessorKey: "address", header: "Address" },
-      { accessorKey: "number", header: "Phone" },
-      { accessorKey: "email", header: "Email" },
-      { accessorKey: "aadhar", header: "Aadhar" },
-      { accessorKey: "pass", header: "Education" },
-      { accessorKey: "year", header: "Year" },
-    ];
-
     const selectCol: ColumnDef<FormRow> = {
       id: "select",
       header: ({ table }) => (
@@ -254,31 +250,53 @@ export default function AdminDashboard() {
         />
       ),
       enableSorting: false,
+      enableHiding: false,
       size: 40,
     };
 
     const serialCol: ColumnDef<FormRow> = {
-      id: "memberId",
+      id: "serialNumber",
+      accessorFn: (row) => row.serialNumber ?? 0,
       header: "Member ID",
       cell: ({ row }) => <SerialCell serialNumber={row.original.serialNumber} />,
-      enableSorting: false,
       size: 90,
     };
 
-    return [selectCol, serialCol, ...base];
+    const dataCols: ColumnDef<FormRow>[] = [
+      { id: "name", accessorKey: "name", header: "Name" },
+      { id: "address", accessorKey: "address", header: "Address" },
+      { id: "number", accessorKey: "number", header: "Phone" },
+      { id: "email", accessorKey: "email", header: "Email" },
+      { id: "aadhar", accessorKey: "aadhar", header: "Aadhar" },
+      { id: "pass", accessorKey: "pass", header: "Education" },
+      { id: "year", accessorKey: "year", header: "Year" },
+    ];
+
+    return [selectCol, serialCol, ...dataCols];
   }, []);
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, rowSelection, columnVisibility },
-    onSortingChange: setSorting,
+    state: { rowSelection, columnVisibility },
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row._id ?? String(row.number),
   });
+
+  /** Toggleable data columns only — select and id columns are excluded. */
+  const toggleableColumns = useMemo(
+    () =>
+      table
+        .getAllLeafColumns()
+        .filter(
+          (column) =>
+            HIDEABLE_COLUMN_IDS.includes(column.id) &&
+            column.getCanHide() !== false
+        ),
+    [table]
+  );
 
   const selectedIds = useMemo(() => {
     if (matchAllIds) {
@@ -326,10 +344,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSort = (columnId: string) => {
-    const isCurrent = state.sortBy === columnId;
-    const nextOrder = isCurrent && state.sortOrder === "desc" ? "asc" : "desc";
-    update({ sortBy: columnId, sortOrder: nextOrder }, { resetPage: true });
+  /** Cycle: none → desc → asc → none. Server-side sort via URL state. */
+  const handleSortToggle = (columnId: string) => {
+    if (state.sortBy !== columnId) {
+      update({ sortBy: columnId, sortOrder: "desc" }, { resetPage: true });
+    } else if (state.sortOrder === "desc") {
+      update({ sortOrder: "asc" }, { resetPage: true });
+    } else {
+      update({ sortBy: "serialNumber", sortOrder: "desc" }, { resetPage: true });
+    }
+  };
+
+  const handleQuickSort = (order: "desc" | "asc") => {
+    update({ sortBy: "serialNumber", sortOrder: order }, { resetPage: true });
   };
 
   const handleExport = async (scope: "all" | "filtered" | "selected", ids?: string[]) => {
@@ -414,6 +441,7 @@ export default function AdminDashboard() {
   };
 
   const visibleRows = table.getRowModel().rows;
+  const newestFirst = state.sortBy === "serialNumber" && state.sortOrder === "desc";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-slate-100">
@@ -466,32 +494,57 @@ export default function AdminDashboard() {
 
         <div className="mt-6 rounded-2xl border border-slate-200/70 bg-white/85 shadow-xl shadow-indigo-100/40 backdrop-blur">
           <div className="flex flex-col gap-3 border-b border-slate-200/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-              <Input
-                ref={searchInputRef}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search members..."
-                className="pl-8 pr-16"
-                aria-label="Search members"
-              />
-              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                {isPending && <Loader2 className="size-3.5 animate-spin text-indigo-500" />}
-                {searchInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchInput("")}
-                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                    aria-label="Clear search"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                ) : (
-                  <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:inline">
-                    ⌘K
-                  </kbd>
-                )}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Input
+                  ref={searchInputRef}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search name, phone, #ID..."
+                  className="pl-8 pr-16"
+                  aria-label="Search members"
+                />
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {isPending && <Loader2 className="size-3.5 animate-spin text-indigo-500" />}
+                  {searchInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearchInput("")}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      aria-label="Clear search"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  ) : (
+                    <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:inline">
+                      ⌘K
+                    </kbd>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex rounded-lg border border-input">
+                <Button
+                  variant={newestFirst ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none rounded-l-lg"
+                  onClick={() => handleQuickSort("desc")}
+                  title="Newest first (#563 → #1)"
+                >
+                  <ArrowDownNarrowWide className="size-4" />
+                  Newest
+                </Button>
+                <Button
+                  variant={!newestFirst && state.sortBy === "serialNumber" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none rounded-r-lg"
+                  onClick={() => handleQuickSort("asc")}
+                  title="Oldest first (#1 → #563)"
+                >
+                  <ArrowUpNarrowWide className="size-4" />
+                  Oldest
+                </Button>
               </div>
             </div>
 
@@ -594,15 +647,17 @@ export default function AdminDashboard() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {ALL_COLUMN_KEYS.map((key) => (
+                  {toggleableColumns.map((column) => (
                     <DropdownMenuCheckboxItem
-                      key={key}
-                      checked={Boolean(columnVisibility[key])}
+                      key={column.id}
+                      checked={Boolean(column.getIsVisible?.())}
                       onCheckedChange={(checked) => {
-                        table.getColumn(key)?.toggleVisibility(checked);
+                        column.toggleVisibility?.(checked);
                       }}
                     >
-                      {COLUMN_LABELS[key]}
+                      {SORTABLE_COLUMNS.find((c) => c.id === column.id)?.label ??
+                        column.columnDef.header?.toString() ??
+                        column.id}
                     </DropdownMenuCheckboxItem>
                   ))}
                 </DropdownMenuContent>
@@ -722,25 +777,27 @@ export default function AdminDashboard() {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
-                      const canSort = header.column.getCanSort();
-                      const isSorted = header.column.getIsSorted();
+                      const columnId = header.column.id;
+                      const sortable = SORTABLE_COLUMNS.some((c) => c.id === columnId);
+                      const isActive = state.sortBy === columnId;
                       return (
                         <TableHead
                           key={header.id}
                           className="whitespace-nowrap"
                           style={{ width: header.column.columnDef.size }}
                         >
-                          {canSort ? (
+                          {sortable ? (
                             <button
                               type="button"
-                              onClick={() => handleSort(header.column.id)}
+                              onClick={() => handleSortToggle(columnId)}
                               className="inline-flex items-center gap-1 hover:text-indigo-700"
+                              aria-label={`Sort by ${header.column.columnDef.header}`}
                             >
                               {flexRender(header.column.columnDef.header, header.getContext())}
-                              {isSorted ? (
-                                <span className="text-indigo-600">
-                                  {isSorted === "desc" ? "↓" : "↑"}
-                                </span>
+                              {isActive && state.sortOrder === "desc" ? (
+                                <span className="text-indigo-600">↓</span>
+                              ) : isActive && state.sortOrder === "asc" ? (
+                                <span className="text-indigo-600">↑</span>
                               ) : (
                                 <ChevronsUpDown className="size-3.5 text-slate-300" />
                               )}
@@ -764,8 +821,8 @@ export default function AdminDashboard() {
                       <TableCell>
                         <Skeleton className="h-4 w-6" />
                       </TableCell>
-                      {ALL_COLUMN_KEYS.map((key) => (
-                        <TableCell key={key}>
+                      {SORTABLE_COLUMNS.map((col) => (
+                        <TableCell key={col.id}>
                           <Skeleton className="h-4 w-full max-w-36" />
                         </TableCell>
                       ))}
@@ -782,7 +839,7 @@ export default function AdminDashboard() {
                       className="cursor-pointer"
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} onClick={undefined}>
+                        <TableCell key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -790,7 +847,7 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={ALL_COLUMN_KEYS.length + 2} className="h-48 text-center">
+                    <TableCell colSpan={SORTABLE_COLUMNS.length + 2} className="h-48 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
                           <Search className="size-5 text-slate-400" />

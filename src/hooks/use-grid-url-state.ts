@@ -20,7 +20,7 @@ export function parseGridQuery(searchParams: URLSearchParams): GridQueryState {
   const pageSizeRaw = Number(searchParams.get("pageSize") ?? "50");
   const pageSize = [10, 25, 50, 100].includes(pageSizeRaw) ? pageSizeRaw : 50;
   const search = searchParams.get("search") ?? "";
-  const sortBy = searchParams.get("sortBy") ?? "createdAt";
+  const sortBy = searchParams.get("sortBy") ?? "serialNumber";
   const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
   const pass = searchParams.getAll("pass");
   const year = searchParams.getAll("year");

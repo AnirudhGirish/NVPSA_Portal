@@ -26,11 +26,19 @@ export interface PaginatedResponse {
   };
 }
 
+export interface EraBreakdownItem {
+  label: string;
+  count: number;
+}
+
 export interface DashboardStats {
   totalAlumni: number;
   uniqueBatches: number;
-  recentSignups: number;
+  recentSignups7d: number;
+  recentSignups30d: number;
+  contactCoverage: { withContact: number; total: number; percentage: number };
   branchBreakdown: Record<string, number>;
+  eraBreakdown: EraBreakdownItem[];
 }
 
 export interface FetchParams {

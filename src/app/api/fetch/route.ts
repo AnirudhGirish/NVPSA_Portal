@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { FilterQuery } from "mongoose";
 import { connectDB } from "@/utils/dbconnect";
 import { Form } from "@/models/form.model";
 import {
@@ -6,16 +7,32 @@ import {
   clampInt,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
-  SORTABLE_COLUMNS,
-  SORT_ORDERS,
+  escapeRegex,
   isPassValue,
   type PassValue,
-  type SortableColumn,
-  type SortOrder,
 } from "@/lib/query";
 import { requireAdmin } from "@/utils/auth";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+/**
+ * Whitelisted sort field mapping. Accepts UI column ids and friendly
+ * aliases (phone / education) and maps them to real document fields.
+ * Anything unknown falls back to serialNumber.
+ */
+const SORT_FIELD_MAP: Record<string, string> = {
+  serialNumber: "serialNumber",
+  name: "name",
+  phone: "number",
+  number: "number",
+  email: "email",
+  education: "pass",
+  pass: "pass",
+  year: "year",
+  address: "address",
+  aadhar: "aadhar",
+  createdAt: "createdAt",
+};
 
 export async function GET(req: Request) {
   await connectDB();
@@ -36,15 +53,9 @@ export async function GET(req: Request) {
 
   const search = searchParams.get("search")?.trim().slice(0, 200) ?? "";
 
-  const sortByRaw = (searchParams.get("sortBy") ?? "createdAt") as string;
-  const sortBy = (SORTABLE_COLUMNS as readonly string[]).includes(sortByRaw)
-    ? (sortByRaw as SortableColumn)
-    : "createdAt";
-
-  const sortOrderRaw = (searchParams.get("sortOrder") ?? "desc") as string;
-  const sortOrder = (SORT_ORDERS as readonly string[]).includes(sortOrderRaw)
-    ? (sortOrderRaw as SortOrder)
-    : "desc";
+  const sortByRaw = searchParams.get("sortBy") ?? "serialNumber";
+  const sortField = SORT_FIELD_MAP[sortByRaw] ?? "serialNumber";
+  const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
 
   const passRaw = searchParams.getAll("pass").filter(isPassValue);
   const pass = passRaw.length > 0 ? (passRaw as PassValue[]) : undefined;
@@ -56,18 +67,43 @@ export async function GET(req: Request) {
   const yearRange = /^\d{4}-\d{4}$/.test(yearRangeRaw) ? yearRangeRaw : undefined;
 
   try {
-    const filter = buildFormFilter({ search, pass, year, yearRange });
+    const filter: FilterQuery<typeof Form> = buildFormFilter({ pass, year, yearRange });
 
-    // Numeric search: if the term is a pure integer, also match serialNumber exactly.
-    const numericSearch = /^\d+$/.test(search) ? Number(search) : null;
-    if (numericSearch !== null) {
-      const serialMatch = { serialNumber: numericSearch };
-      filter.$or = filter.$or ? [...(filter.$or as object[]), serialMatch] : [serialMatch];
+    if (search) {
+      const sanitized = escapeRegex(search);
+      const isNumeric = /^\d+$/.test(search);
+      const numVal = Number(search);
+
+      const orConditions: FilterQuery<typeof Form>[] = [
+        { name: { $regex: sanitized, $options: "i" } },
+        { email: { $regex: sanitized, $options: "i" } },
+        { pass: { $regex: sanitized, $options: "i" } },
+        { year: { $regex: sanitized, $options: "i" } },
+        { address: { $regex: sanitized, $options: "i" } },
+        { aadhar: { $regex: sanitized, $options: "i" } },
+        // Phones are stored as Numbers; convert to string inside the query
+        // so partial phone searches (e.g. "980870") match.
+        {
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$number" },
+              regex: sanitized,
+            },
+          },
+        } as FilterQuery<typeof Form>,
+      ];
+
+      if (isNumeric) {
+        // Exact Member ID match (#42 → serialNumber: 42).
+        orConditions.push({ serialNumber: numVal });
+      }
+
+      filter.$or = orConditions;
     }
 
     const [responses, total] = await Promise.all([
       Form.find(filter)
-        .sort({ [sortBy]: sortOrder })
+        .sort({ [sortField]: sortOrder, _id: 1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .lean(),
