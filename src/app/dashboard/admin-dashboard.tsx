@@ -13,6 +13,7 @@ import {
   Download,
   Filter,
   Loader2,
+  Mail,
   RefreshCw,
   RotateCcw,
   Search,
@@ -63,6 +64,7 @@ import {
   EditMemberDialog,
   DeleteMemberDialog,
 } from "@/components/dashboard/member-actions";
+import { InquiriesPanel } from "@/components/dashboard/inquiries-panel";
 
 const PAGE_SIZE = 25;
 const PASS_VALUES = ["SSLC", "PUC", "Degree", "Others"];
@@ -137,6 +139,9 @@ export default function AdminDashboard() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  const [view, setView] = useState<"directory" | "inquiries">("directory");
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const passFilter = useMemo(
@@ -169,6 +174,16 @@ export default function AdminDashboard() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Fetch unread inquiry count for the tab badge on mount.
+  useEffect(() => {
+    fetch("/api/admin/inquiries", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.success) setUnreadCount(d.unreadCount);
+      })
+      .catch(() => {});
   }, []);
 
   const columns = useMemo<ColumnDef<FormRow>[]>(() => {
@@ -469,6 +484,39 @@ export default function AdminDashboard() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        {/* View tabs */}
+        <div className="mb-4 flex w-fit items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-institutional">
+          <button
+            type="button"
+            onClick={() => setView("directory")}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === "directory"
+                ? "bg-navy text-white"
+                : "text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            Alumni Directory
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("inquiries")}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === "inquiries"
+                ? "bg-navy text-white"
+                : "text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            <Mail className="size-4" />
+            Inquiries
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-heritage px-2 py-0.5 text-[10px] font-bold text-white tabular-nums">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className={view === "directory" ? "" : "hidden"}>
         <StatCards />
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-institutional-lg">
@@ -873,6 +921,11 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        </div>
+
+        {view === "inquiries" && (
+          <InquiriesPanel onUnreadChange={setUnreadCount} />
+        )}
       </main>
 
       <AnimatePresence>

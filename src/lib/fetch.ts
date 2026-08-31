@@ -117,6 +117,76 @@ export async function fetchStats(): Promise<DashboardStats> {
   return result.stats as DashboardStats;
 }
 
+export interface InquiryRow {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  status: "unread" | "read" | "resolved";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function submitInquiry(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}): Promise<void> {
+  const response = await fetch("/api/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.message || "Submission failed");
+  }
+}
+
+export async function fetchInquiries(): Promise<{
+  inquiries: InquiryRow[];
+  unreadCount: number;
+}> {
+  const response = await fetch("/api/admin/inquiries", { cache: "no-store" });
+  if (response.status === 401) {
+    throw new Error("UNAUTHORIZED");
+  }
+  if (!response.ok) {
+    throw new Error("Failed to fetch inquiries");
+  }
+  const result = await response.json();
+  return { inquiries: result.inquiries as InquiryRow[], unreadCount: result.unreadCount as number };
+}
+
+export async function updateInquiryStatus(
+  id: string,
+  status: "unread" | "read" | "resolved"
+): Promise<number> {
+  const response = await fetch("/api/admin/inquiries", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status }),
+  });
+  if (!response.ok) {
+    throw new Error("Could not update inquiry");
+  }
+  const result = await response.json();
+  return result.unreadCount as number;
+}
+
+export async function deleteInquiry(id: string): Promise<number> {
+  const response = await fetch(`/api/admin/inquiries?id=${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error("Could not delete inquiry");
+  }
+  const result = await response.json();
+  return result.unreadCount as number;
+}
+
 export async function checkPhoneExists(number: string): Promise<boolean> {
   const response = await fetch(`/api/form/check?number=${encodeURIComponent(number)}`);
   if (!response.ok) {
